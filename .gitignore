@@ -1,0 +1,43 @@
+# Boot.dev
+*.bootdev
+session_cookies/
+bootdev_session/
+
+# Secrets
+.env
+*.key
+*.pem
+secrets/
+credentials/
+*.env.local
+*.env.production
+
+# IDE
+.vscode/
+.idea/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+
+# OS
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+logs/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
