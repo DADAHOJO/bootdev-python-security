@@ -71,48 +71,72 @@ See `security-mapping.md` for full chapter-by-chapter mappings.
 
 ## Daily GitHub Automation (Safe)
 
-Use this for both repos:
+Use this for all three repos:
 - `https://github.com/DADAHOJO/bootdev-python-security`
 - `https://github.com/DADAHOJO/bootdev-security-journey`
+- `https://github.com/DADAHOJO/bootdev-secure-projects`
 
-### 1) Create script: `scripts/daily-sync.ps1`
+### 1) Daily root launcher (recommended)
+
+From the `scripts/` folder:
 
 ```powershell
-param(
-  [string]$Message = "docs: daily Boot.dev sync"
-)
-
-$repos = @(
-  "C:\Users\H_Abbas\CascadeProjects\bootdev-python-security",
-  "C:\Users\H_Abbas\CascadeProjects\bootdev-security-journey"
-)
-
-foreach ($repo in $repos) {
-  Set-Location $repo
-  git add .
-
-  $hasChanges = git diff --cached --name-only
-  if (-not [string]::IsNullOrWhiteSpace($hasChanges)) {
-    git commit -m $Message
-    git push origin main
-    Write-Host "Committed and pushed: $repo"
-  } else {
-    Write-Host "No staged changes: $repo"
-  }
-}
+.\sync-bootdev.cmd
 ```
+
+This will:
+- OCR today’s screenshots from `Boot.Dev screenshots/`
+- Auto-map OWASP security category format
+- Append progress entries and update README activity sections
+- Commit, rebase, and push all repos
 
 ### 2) Manual daily run
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\bootdev-python-security\scripts\daily-sync.ps1 -Message "Day X: Boot.dev Python progress + security mapping"
+powershell -ExecutionPolicy Bypass -File .\scripts\daily-sync.ps1 -Message "Day X: Boot.dev Python progress + security mapping"
 ```
+
+### 2b) Recommended root launcher (auto progress entry + sync)
+
+Use the root launcher to append this exact format to `progress-log.md` in related repos before syncing:
+
+```text
+May 15, 2026
+Streak Activity: 1 Boot.dev/GitHub activity
+Chapter Focus: Chapter 9 - Lists
+Lesson Concepts Covered: slicing, concatenate/contains operations, deletion patterns, tuples, first element/reverse/filter practice
+Security Connection: OWASP A09 - list-based event filtering and result triage pipelines
+```
+
+Example daily run from `scripts/`:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\run-daily-sync.ps1 `
+  -Chapter 9 `
+  -ChapterTitle "Lists" `
+  -Concept "slicing, concatenate/contains operations, deletion patterns, tuples, first element/reverse/filter practice" `
+  -Security "OWASP A09 - list-based event filtering and result triage pipelines" `
+  -StreakActivity 1
+```
+
+Optional explicit fields:
+- `-ChapterSummary`
+- `-ChapterFolder`
+- `-ChapterFocus`
+- `-LessonConceptsCovered`
+- `-SecurityConnection`
+- `-EntryDate`
+
+After you finish learning for the day:
+1. Save your changes in each repo.
+2. Run the root launcher once from `bootdev-python-security/scripts`.
+3. If a rebase conflict appears, resolve it in that repo and rerun the same command.
 
 Optional commit message generator:
 
 ```powershell
-$msg = powershell -ExecutionPolicy Bypass -File .\bootdev-python-security\scripts\generate-commit-message.ps1 -Chapter 8 -Concept "loops-practice" -Security "A09-monitoring"
-powershell -ExecutionPolicy Bypass -File .\bootdev-python-security\scripts\daily-sync.ps1 -Message $msg
+$msg = powershell -ExecutionPolicy Bypass -File .\scripts\generate-commit-message.ps1 -Chapter 8 -Concept "loops-practice" -Security "A09-monitoring"
+powershell -ExecutionPolicy Bypass -File .\scripts\daily-sync.ps1 -Message $msg
 ```
 
 ### 3) Optional scheduled run
@@ -120,7 +144,8 @@ powershell -ExecutionPolicy Bypass -File .\bootdev-python-security\scripts\daily
 Use **Task Scheduler**:
 - Trigger: Daily at your preferred time
 - Action: `powershell.exe`
-- Arguments: `-ExecutionPolicy Bypass -File "C:\Users\H_Abbas\CascadeProjects\bootdev-python-security\scripts\daily-sync.ps1"`
+- Arguments: `-ExecutionPolicy Bypass -File ".\scripts\daily-sync.ps1"`
+- Start in: your `bootdev-python-security` repo root
 
 ## Commit Quality Rules
 
