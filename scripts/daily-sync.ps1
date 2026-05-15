@@ -3,12 +3,24 @@ param(
 )
 
 $projectsRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
-$repos = @(
-  (Join-Path $projectsRoot "bootdev-python-security"),
-  (Join-Path $projectsRoot "bootdev-security-journey")
+$repoConfigs = @(
+  @{
+    Path = (Join-Path $projectsRoot "bootdev-python-security")
+    AddPaths = @("README.md", "progress-log.md", "security-mapping.md", "chapters", "notes")
+  },
+  @{
+    Path = (Join-Path $projectsRoot "bootdev-security-journey")
+    AddPaths = @("progress-log.md", "README.md")
+  },
+  @{
+    Path = (Join-Path $projectsRoot "bootdev-secure-projects")
+    AddPaths = @(".")
+  }
 )
 
-foreach ($repo in $repos) {
+foreach ($repoConfig in $repoConfigs) {
+  $repo = $repoConfig.Path
+  $addPaths = $repoConfig.AddPaths
   if (-not (Test-Path $repo)) {
     Write-Host "Path not found: $repo"
     continue
@@ -20,15 +32,29 @@ foreach ($repo in $repos) {
   }
 
   Set-Location $repo
+  Write-Host "`n=== Syncing: $repo ==="
 
-  git add .
+  foreach ($addPath in $addPaths) {
+    git add -- $addPath
+  }
   $hasChanges = git diff --cached --name-only
 
   if (-not [string]::IsNullOrWhiteSpace($hasChanges)) {
     git commit -m $Message
-    git push origin main
-    Write-Host "Committed and pushed: $repo"
   } else {
-    Write-Host "No staged changes: $repo"
+    Write-Host "No new local changes to commit: $repo"
+  }
+
+  git pull --rebase origin main
+  if ($LASTEXITCODE -ne 0) {
+    Write-Host "Rebase failed for $repo. Resolve conflicts, then run the script again."
+    continue
+  }
+
+  git push origin main
+  if ($LASTEXITCODE -eq 0) {
+    Write-Host "Synced local + GitHub: $repo"
+  } else {
+    Write-Host "Push failed for $repo"
   }
 }
