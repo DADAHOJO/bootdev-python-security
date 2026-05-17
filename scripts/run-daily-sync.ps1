@@ -1292,33 +1292,37 @@ if ((Test-Path $pythonSecurityNotesPath) -and $statusChapter -and -not [string]:
       }
     }
 
-    $crosswalkLine = "- CH$statusChapter $rightArrow "
     $crosswalkCodes = @(Get-OwaspCodesFromText -Text "$SecurityConnection $Security")
     if ($crosswalkCodes.Count -eq 0 -and $chapterSecurityDefaults.ContainsKey($statusChapter)) {
       $crosswalkCodes = @(Get-OwaspCodesFromText -Text $chapterSecurityDefaults[$statusChapter])
     }
-    if ($crosswalkCodes.Count -gt 0) {
-      $crosswalkLine += ($crosswalkCodes -join '/')
-    } else {
-      $crosswalkLine += "TBD"
-    }
+    $currentCrosswalkFocus = if ($crosswalkCodes.Count -gt 0) { $crosswalkCodes -join '/' } else { "TBD" }
 
-    $crosswalkTargetIndex = -1
+    $crosswalkMap = @{}
     for ($i = $crosswalkHeaderIndex + 1; $i -lt $crosswalkEnd; $i++) {
-      if ($pythonSecurityNotesLines[$i] -match "^- CH$statusChapter\s+") {
-        $crosswalkTargetIndex = $i
-        break
+      if ($pythonSecurityNotesLines[$i] -match '^\-\s*CH(\d+)\s+\S+\s+(.+)$') {
+        $crosswalkMap[[int]$matches[1]] = $matches[2].Trim()
       }
     }
+    $crosswalkMap[$statusChapter] = $currentCrosswalkFocus
 
-    if ($crosswalkTargetIndex -ge 0) {
-      $pythonSecurityNotesLines[$crosswalkTargetIndex] = $crosswalkLine
-    } else {
-      $insertCrosswalkAt = $crosswalkHeaderIndex + 1
-      while ($insertCrosswalkAt -lt $crosswalkEnd -and $pythonSecurityNotesLines[$insertCrosswalkAt] -match '^- CH\d+') {
-        $insertCrosswalkAt++
-      }
-      $pythonSecurityNotesLines.Insert($insertCrosswalkAt, $crosswalkLine)
+    $rewriteStart = $crosswalkHeaderIndex + 1
+    while ($rewriteStart -lt $crosswalkEnd -and [string]::IsNullOrWhiteSpace($pythonSecurityNotesLines[$rewriteStart])) {
+      $rewriteStart++
+    }
+
+    if ($crosswalkEnd -gt $rewriteStart) {
+      $pythonSecurityNotesLines.RemoveRange($rewriteStart, $crosswalkEnd - $rewriteStart)
+    }
+
+    $renderedCrosswalk = [System.Collections.Generic.List[string]]::new()
+    foreach ($chapterNumber in @($crosswalkMap.Keys | Sort-Object)) {
+      [void]$renderedCrosswalk.Add("- CH$chapterNumber $rightArrow $($crosswalkMap[$chapterNumber])")
+    }
+    [void]$renderedCrosswalk.Add("")
+
+    if ($renderedCrosswalk.Count -gt 0) {
+      $pythonSecurityNotesLines.InsertRange($rewriteStart, $renderedCrosswalk)
     }
   }
 
