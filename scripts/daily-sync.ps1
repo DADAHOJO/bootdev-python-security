@@ -10,7 +10,7 @@ $repoConfigs = @(
   },
   @{
     Path = (Join-Path $projectsRoot "bootdev-security-journey")
-    AddPaths = @("progress-log.md", "README.md")
+    AddPaths = @("progress-log.md", "README.md", "roadmap.md")
   },
   @{
     Path = (Join-Path $projectsRoot "bootdev-secure-projects")

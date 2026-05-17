@@ -48,6 +48,30 @@ if (-not (Test-Path $syncScript)) {
 }
 
 $defaultOwasp = "A09: Security Logging and Monitoring Failures"
+$chapterSecurityDefaults = @{
+  1 = "OWASP A04: Insecure Design"
+  2 = "OWASP A05: Security Misconfiguration"
+  3 = "OWASP A03: Injection"
+  4 = "OWASP A05: Security Misconfiguration"
+  5 = "OWASP A05: Security Misconfiguration"
+  6 = "OWASP A04/A08: Insecure Design and Software and Data Integrity Failures"
+  7 = "OWASP A01/A09: Broken Access Control and Security Logging and Monitoring Failures"
+  8 = "OWASP A09: Security Logging and Monitoring Failures"
+  9 = "OWASP A09: Security Logging and Monitoring Failures"
+  10 = "OWASP A09: Security Logging and Monitoring Failures"
+}
+$chapterBreakdownSecurityDefaults = @{
+  1 = "OWASP A04 (secure design fundamentals)"
+  2 = "OWASP A05 (type and state safety)"
+  3 = "OWASP A03 (input validation abstractions)"
+  4 = "OWASP A05 (safe state boundaries)"
+  5 = "OWASP A05 (safe failures, trace discipline)"
+  6 = "OWASP A04/A08 (integrity-aware computation)"
+  7 = "OWASP A01/A09 (decision and policy logic)"
+  8 = "OWASP A09 (monitoring and iteration reliability)"
+  9 = "OWASP A09 (event set processing and triage)"
+  10 = "OWASP A09 (dictionary-based event context and monitoring state)"
+}
 $defaultScreenshotDir = Join-Path $projectsRoot "Boot.Dev-screenshots"
 if ([string]::IsNullOrWhiteSpace($ScreenshotDir)) {
   $ScreenshotDir = $defaultScreenshotDir
@@ -281,8 +305,13 @@ if ([string]::IsNullOrWhiteSpace($ChapterFolder) -and -not [string]::IsNullOrWhi
   }
 }
 
+$chapterNumberFromInput = if (-not [string]::IsNullOrWhiteSpace($Chapter) -and $Chapter -match '^\d+$') { [int]$Chapter } else { $null }
 if ([string]::IsNullOrWhiteSpace($Security) -or $Security -eq "OWASP mapping update") {
-  $Security = $defaultOwasp
+  if ($chapterNumberFromInput -and $chapterSecurityDefaults.ContainsKey($chapterNumberFromInput)) {
+    $Security = $chapterSecurityDefaults[$chapterNumberFromInput]
+  } else {
+    $Security = $defaultOwasp
+  }
 }
 
 if ([string]::IsNullOrWhiteSpace($Message) -and -not [string]::IsNullOrWhiteSpace($Chapter) -and -not [string]::IsNullOrWhiteSpace($Concept)) {
@@ -346,6 +375,8 @@ if ($lessonItems.Count -eq 0 -and -not [string]::IsNullOrWhiteSpace($Concept)) {
 if ($lessonItems.Count -eq 0) {
   $lessonItems = @("progress updates")
 }
+
+$hasSpecificLearningPayload = $chapterNumberFromInput -and -not [string]::IsNullOrWhiteSpace($ChapterTitle) -and -not [string]::IsNullOrWhiteSpace($Concept) -and $Concept.Trim().ToLowerInvariant() -ne "progress updates"
 
 if (-not [string]::IsNullOrWhiteSpace($ChapterFolder)) {
   $chapterDirPath = Join-Path $chapterRootPath $ChapterFolder
@@ -452,8 +483,13 @@ function Format-ActiveDaysList {
 
     $monthName = $groupDates[0].ToString("MMMM")
     $yearValue = $groupDates[0].Year
-    $daysText = ($groupDates | ForEach-Object { $_.Day }) -join ", "
-    $segments += "$monthName $daysText ($yearValue)"
+    $startDay = $groupDates[0].Day
+    $endDay = $groupDates[$groupDates.Count - 1].Day
+    if ($startDay -eq $endDay) {
+      $segments += "${monthName}: $startDay ($yearValue)"
+    } else {
+      $segments += "${monthName}: $startDay - $endDay ($yearValue)"
+    }
   }
 
   return ($segments -join "; ")
@@ -550,6 +586,84 @@ function Find-LineIndex {
   }
 
   return -1
+}
+
+function Get-CompletionWindowText {
+  param([datetime[]]$Dates)
+
+  $sortedDates = @($Dates | Sort-Object -Unique)
+  if ($sortedDates.Count -eq 0) {
+    return "In Progress"
+  }
+
+  $startDate = $sortedDates[0]
+  $endDate = $sortedDates[$sortedDates.Count - 1]
+  if ($startDate.Date -eq $endDate.Date) {
+    return $startDate.ToString("MMMM d")
+  }
+
+  if ($startDate.Year -eq $endDate.Year -and $startDate.Month -eq $endDate.Month) {
+    return "{0} {1}-{2}" -f $startDate.ToString("MMMM"), $startDate.Day, $endDate.Day
+  }
+
+  if ($startDate.Year -eq $endDate.Year) {
+    return "{0} {1}-{2} {3}" -f $startDate.ToString("MMM"), $startDate.Day, $endDate.ToString("MMM"), $endDate.Day
+  }
+
+  return "{0} - {1}" -f $startDate.ToString("MMM d, yyyy"), $endDate.ToString("MMM d, yyyy")
+}
+
+function Get-OwaspCodesFromText {
+  param([string]$Text)
+
+  if ([string]::IsNullOrWhiteSpace($Text)) {
+    return @()
+  }
+
+  $codeMatches = [regex]::Matches($Text, 'A\d{2}', [System.Text.RegularExpressions.RegexOptions]::IgnoreCase)
+  $codes = @()
+  foreach ($match in $codeMatches) {
+    $code = $match.Value.ToUpperInvariant()
+    if ($codes -notcontains $code) {
+      $codes += $code
+    }
+  }
+
+  return $codes
+}
+
+function Get-ChapterTrackDetail {
+  param(
+    [string]$Summary,
+    [string[]]$ConceptItems,
+    [string]$FallbackConcept
+  )
+
+  if (-not [string]::IsNullOrWhiteSpace($Summary)) {
+    return $Summary.Trim()
+  }
+
+  $items = @($ConceptItems | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Unique)
+  if ($items.Count -eq 0 -and -not [string]::IsNullOrWhiteSpace($FallbackConcept)) {
+    $items = @(
+      $FallbackConcept -split ',' |
+        ForEach-Object { $_.Trim() } |
+        Where-Object { -not [string]::IsNullOrWhiteSpace($_) } |
+        Select-Object -Unique
+    )
+  }
+
+  if ($items.Count -eq 0) {
+    return "topic coverage"
+  }
+
+  $selectedItems = @($items | Select-Object -First 6)
+  $detail = ($selectedItems -join ", ")
+  if ($items.Count -gt $selectedItems.Count) {
+    $detail = "$detail, ..."
+  }
+
+  return $detail
 }
 
 $progressLogs = @(
@@ -680,6 +794,7 @@ $pythonActiveDaysText = Format-ActiveDaysList -Dates $pythonSnapshot.ActiveDates
 $journeyActiveDaysText = Format-ActiveDaysList -Dates $journeySnapshot.ActiveDates
 $rangeDash = [char]0x2013
 $statusCheck = [char]0x2705
+$rightArrow = [char]0x2192
 
 if (Test-Path $pythonProgressLogPath) {
   $pythonProgressLines = [System.Collections.Generic.List[string]](Get-Content -Path $pythonProgressLogPath -Encoding UTF8)
@@ -696,7 +811,7 @@ if (Test-Path $pythonProgressLogPath) {
     $chaptersCompletedIndex = Find-LineIndex -Lines $pythonProgressLines -Predicate { param($line) $line -match '^- \*\*Chapters Completed:\*\*' }
     if ($chaptersCompletedIndex -ge 0) {
       if (-not [string]::IsNullOrWhiteSpace($pythonSnapshot.MaxChapterTitle)) {
-        $pythonProgressLines[$chaptersCompletedIndex] = "- **Chapters Completed:** $($pythonSnapshot.MaxChapter)/$($pythonSnapshot.MaxChapter) (Introduction → $($pythonSnapshot.MaxChapterTitle))"
+        $pythonProgressLines[$chaptersCompletedIndex] = "- **Chapters Completed:** $($pythonSnapshot.MaxChapter)/$($pythonSnapshot.MaxChapter) (Introduction $rightArrow $($pythonSnapshot.MaxChapterTitle))"
       } else {
         $pythonProgressLines[$chaptersCompletedIndex] = "- **Chapters Completed:** $($pythonSnapshot.MaxChapter)/$($pythonSnapshot.MaxChapter)"
       }
@@ -706,6 +821,75 @@ if (Test-Path $pythonProgressLogPath) {
   $activeDaysLoggedIndex = Find-LineIndex -Lines $pythonProgressLines -Predicate { param($line) $line -match '^- \*\*Active Days Logged:\*\*' }
   if ($activeDaysLoggedIndex -ge 0) {
     $pythonProgressLines[$activeDaysLoggedIndex] = "- **Active Days Logged:** $(@($pythonSnapshot.ActiveDates).Count) days"
+  }
+
+  $chapterBreakdownHeaderIndex = Find-LineIndex -Lines $pythonProgressLines -Predicate { param($line) $line -match '^### Chapter Breakdown' }
+  if ($chapterBreakdownHeaderIndex -ge 0 -and $pythonSnapshot.ChapterRecords.Count -gt 0) {
+    $tableHeaderIndex = Find-LineIndex -Lines $pythonProgressLines -Predicate { param($line) $line.Trim() -match '^\|\s*Chapter\s*\|\s*Topic\s*\|\s*Completion Window\s*\|\s*Security Mapping\s*\|' } -StartIndex ($chapterBreakdownHeaderIndex + 1)
+    if ($tableHeaderIndex -ge 0) {
+      $separatorIndex = Find-LineIndex -Lines $pythonProgressLines -Predicate { param($line) $line.Trim() -match '^\|[-\s|]+\|$' } -StartIndex ($tableHeaderIndex + 1)
+      if ($separatorIndex -ge 0) {
+        $tableEnd = $pythonProgressLines.Count
+        for ($i = $separatorIndex + 1; $i -lt $pythonProgressLines.Count; $i++) {
+          $trimmed = $pythonProgressLines[$i].Trim()
+          if ([string]::IsNullOrWhiteSpace($trimmed) -or $trimmed -notmatch '^\|') {
+            $tableEnd = $i
+            break
+          }
+        }
+
+        $existingBreakdown = @{}
+        for ($i = $separatorIndex + 1; $i -lt $tableEnd; $i++) {
+          if ($pythonProgressLines[$i] -match '^\|\s*(\d+)\s*\|\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|') {
+            $existingBreakdown[[int]$matches[1]] = [pscustomobject]@{
+              Topic = $matches[2].Trim()
+              Security = $matches[4].Trim()
+            }
+          }
+        }
+
+        $chapterGroups = @($pythonSnapshot.ChapterRecords | Group-Object Chapter | Sort-Object { [int]$_.Name })
+        $newRows = [System.Collections.Generic.List[string]]::new()
+        foreach ($chapterGroup in $chapterGroups) {
+          $chapterNumber = [int]$chapterGroup.Name
+          $records = @($chapterGroup.Group | Sort-Object Date)
+          $topic = "Chapter $chapterNumber"
+          $latestTitle = @($records | Where-Object { -not [string]::IsNullOrWhiteSpace($_.Title) } | Select-Object -Last 1)
+          if ($latestTitle.Count -gt 0) {
+            $topic = $latestTitle[0].Title
+          } elseif ($existingBreakdown.ContainsKey($chapterNumber) -and -not [string]::IsNullOrWhiteSpace($existingBreakdown[$chapterNumber].Topic)) {
+            $topic = $existingBreakdown[$chapterNumber].Topic
+          }
+
+          $completionWindow = Get-CompletionWindowText -Dates @($records | Select-Object -ExpandProperty Date)
+          $securityText = if ($existingBreakdown.ContainsKey($chapterNumber) -and -not [string]::IsNullOrWhiteSpace($existingBreakdown[$chapterNumber].Security)) {
+            $existingBreakdown[$chapterNumber].Security
+          } elseif ($chapterBreakdownSecurityDefaults.ContainsKey($chapterNumber)) {
+            $chapterBreakdownSecurityDefaults[$chapterNumber]
+          } else {
+            "OWASP mapping in progress"
+          }
+
+          if ($chapterNumberFromInput -and $chapterNumber -eq $chapterNumberFromInput -and -not [string]::IsNullOrWhiteSpace($SecurityConnection)) {
+            if ($SecurityConnection -match '(?i)owasp') {
+              $securityText = $SecurityConnection
+            } else {
+              $securityText = "OWASP $SecurityConnection"
+            }
+          }
+
+          [void]$newRows.Add("| $chapterNumber | $topic | $completionWindow | $securityText |")
+        }
+
+        if ($tableEnd -gt ($separatorIndex + 1)) {
+          $pythonProgressLines.RemoveRange($separatorIndex + 1, $tableEnd - ($separatorIndex + 1))
+        }
+
+        if ($newRows.Count -gt 0) {
+          $pythonProgressLines.InsertRange($separatorIndex + 1, $newRows)
+        }
+      }
+    }
   }
 
   Set-Content -Path $pythonProgressLogPath -Value $pythonProgressLines -Encoding UTF8
@@ -723,6 +907,46 @@ if (Test-Path $journeyProgressLogPath) {
   $journeyActiveIndex = Find-LineIndex -Lines $journeyProgressLines -Predicate { param($line) $line -match '^- \*\*Active days represented:\*\*' }
   if ($journeyActiveIndex -ge 0 -and -not [string]::IsNullOrWhiteSpace($journeyActiveDaysText)) {
     $journeyProgressLines[$journeyActiveIndex] = "- **Active days represented:** $journeyActiveDaysText"
+  }
+
+  $journeySecurityHeaderIndex = Find-LineIndex -Lines $journeyProgressLines -Predicate { param($line) $line -match '^### Security Mapping Progress' }
+  if ($journeySecurityHeaderIndex -ge 0 -and $pythonSnapshot.ChapterRecords.Count -gt 0) {
+    $journeySecurityEnd = $journeyProgressLines.Count
+    for ($i = $journeySecurityHeaderIndex + 1; $i -lt $journeyProgressLines.Count; $i++) {
+      if ($journeyProgressLines[$i] -match '^###\s+' -or $journeyProgressLines[$i] -match '^##\s+') {
+        $journeySecurityEnd = $i
+        break
+      }
+    }
+
+    $securityLines = [System.Collections.Generic.List[string]]::new()
+    [void]$securityLines.Add("### Security Mapping Progress")
+    $journeyChapterGroups = @($pythonSnapshot.ChapterRecords | Group-Object Chapter | Sort-Object { [int]$_.Name })
+    foreach ($chapterGroup in $journeyChapterGroups) {
+      $chapterNumber = [int]$chapterGroup.Name
+      $records = @($chapterGroup.Group | Sort-Object Date)
+      $chapterLabel = "Chapter $chapterNumber"
+      $latestTitle = @($records | Where-Object { -not [string]::IsNullOrWhiteSpace($_.Title) } | Select-Object -Last 1)
+      if ($latestTitle.Count -gt 0) {
+        $chapterLabel = $latestTitle[0].Title
+      }
+
+      $owaspSource = if ($chapterNumberFromInput -and $chapterNumber -eq $chapterNumberFromInput) {
+        "$SecurityConnection $Security"
+      } elseif ($chapterSecurityDefaults.ContainsKey($chapterNumber)) {
+        $chapterSecurityDefaults[$chapterNumber]
+      } else {
+        ""
+      }
+
+      $owaspCodes = @(Get-OwaspCodesFromText -Text $owaspSource)
+      $owaspText = if ($owaspCodes.Count -gt 0) { "OWASP " + ($owaspCodes -join '/') } else { "OWASP mapping in progress" }
+      [void]$securityLines.Add("- CH$chapterNumber $chapterLabel $rightArrow $owaspText")
+    }
+    [void]$securityLines.Add("")
+
+    $journeyProgressLines.RemoveRange($journeySecurityHeaderIndex, $journeySecurityEnd - $journeySecurityHeaderIndex)
+    $journeyProgressLines.InsertRange($journeySecurityHeaderIndex, $securityLines)
   }
 
   Set-Content -Path $journeyProgressLogPath -Value $journeyProgressLines -Encoding UTF8
@@ -845,7 +1069,7 @@ if (Test-Path $readmePath) {
     $readmeLines[$trackHeaderIndex] = "## Chapter Track (1$rangeDash$statusChapter)"
   }
 
-  if (-not [string]::IsNullOrWhiteSpace($statusChapterTitle)) {
+  if (-not [string]::IsNullOrWhiteSpace($statusChapterTitle) -and $hasSpecificLearningPayload) {
     $trackHeaderIndex = Find-LineIndex -Lines $readmeLines -Predicate { param($line) $line -match "^## Chapter Track" }
     if ($trackHeaderIndex -ge 0) {
       $trackLineIndices = @()
@@ -857,36 +1081,287 @@ if (Test-Path $readmePath) {
         }
       }
 
-      $alreadyTracked = $readmeLines | Where-Object { $_ -match "\*\*$([Regex]::Escape($statusChapterTitle))\*\*" }
-      if (-not $alreadyTracked) {
-        $nextNumber = if ($statusChapter) {
-          [int]$statusChapter
-        } elseif ($trackLineIndices.Count -gt 0 -and $readmeLines[$trackLineIndices[-1]] -match "^(\d+)\.") {
-          [int]$matches[1] + 1
-        } else {
-          1
+      $chapterDetail = Get-ChapterTrackDetail -Summary $ChapterSummary -ConceptItems $lessonItems -FallbackConcept $Concept
+      $newTrackLine = "$statusChapter. **$statusChapterTitle** $rangeDash $chapterDetail"
+      $targetTrackIndex = -1
+      foreach ($trackLineIndex in $trackLineIndices) {
+        if ($readmeLines[$trackLineIndex] -match "^$statusChapter\.\s+\*\*") {
+          $targetTrackIndex = $trackLineIndex
+          break
         }
+      }
 
-        $chapterDetail = if (-not [string]::IsNullOrWhiteSpace($ChapterSummary)) {
-          $ChapterSummary
-        } elseif (-not [string]::IsNullOrWhiteSpace($Concept)) {
-          $Concept
-        } else {
-          "topic coverage"
-        }
-
-        $newTrackLine = "$nextNumber. **$statusChapterTitle** - $chapterDetail"
-        if ($trackLineIndices.Count -gt 0) {
-          $readmeLines.Insert($trackLineIndices[-1] + 1, $newTrackLine)
-        } else {
-          $readmeLines.Insert($trackHeaderIndex + 1, $newTrackLine)
-        }
+      if ($targetTrackIndex -ge 0) {
+        $readmeLines[$targetTrackIndex] = $newTrackLine
+      } else {
+        $insertTrackIndex = if ($trackLineIndices.Count -gt 0) { $trackLineIndices[-1] + 1 } else { $trackHeaderIndex + 1 }
+        $readmeLines.Insert($insertTrackIndex, $newTrackLine)
       }
     }
   }
 
   Set-Content -Path $readmePath -Value $readmeLines -Encoding UTF8
   Write-Host "Updated README activity sections: $readmePath"
+}
+
+$securityMappingPath = Join-Path $pythonRepo "security-mapping.md"
+if ((Test-Path $securityMappingPath) -and $statusChapter -and -not [string]::IsNullOrWhiteSpace($statusChapterTitle) -and $hasSpecificLearningPayload) {
+  $securityLines = [System.Collections.Generic.List[string]](Get-Content -Path $securityMappingPath -Encoding UTF8)
+  $mappingTitleIndex = Find-LineIndex -Lines $securityLines -Predicate { param($line) $line -match '^# Python to OWASP Security Mapping \(Chapters \d+\-\d+\)' }
+  if ($mappingTitleIndex -ge 0) {
+    $securityLines[$mappingTitleIndex] = "# Python to OWASP Security Mapping (Chapters 1-$statusChapter)"
+  }
+
+  $owaspSectionLabel = if (-not [string]::IsNullOrWhiteSpace($SecurityConnection) -and $SecurityConnection -match '(?i)owasp') {
+    $SecurityConnection
+  } elseif (-not [string]::IsNullOrWhiteSpace($SecurityConnection)) {
+    "OWASP $SecurityConnection"
+  } elseif ($chapterSecurityDefaults.ContainsKey($statusChapter)) {
+    $chapterSecurityDefaults[$statusChapter]
+  } else {
+    "OWASP mapping in progress"
+  }
+
+  $mappingSectionHeader = "### Chapter ${statusChapter}: $statusChapterTitle"
+  $mappingSectionStart = Find-LineIndex -Lines $securityLines -Predicate { param($line) $line.Trim() -eq $mappingSectionHeader }
+  if ($mappingSectionStart -lt 0) {
+    $mappingSectionStart = Find-LineIndex -Lines $securityLines -Predicate { param($line) $line -match "^### Chapter\s+$statusChapter\s*:" }
+  }
+
+  $mappingInsertAt = Find-LineIndex -Lines $securityLines -Predicate { param($line) $line -match '^## Quick OWASP Coverage Matrix' }
+  if ($mappingInsertAt -lt 0) {
+    $mappingInsertAt = $securityLines.Count
+  }
+
+  if ($mappingSectionStart -ge 0) {
+    $mappingSectionEnd = $securityLines.Count
+    for ($i = $mappingSectionStart + 1; $i -lt $securityLines.Count; $i++) {
+      if ($securityLines[$i] -match '^###\s+Chapter' -or $securityLines[$i] -match '^##\s+Quick OWASP Coverage Matrix') {
+        $mappingSectionEnd = $i
+        break
+      }
+    }
+    $securityLines.RemoveRange($mappingSectionStart, $mappingSectionEnd - $mappingSectionStart)
+    $mappingInsertAt = $mappingSectionStart
+  }
+
+  $mappingSectionLines = [System.Collections.Generic.List[string]]::new()
+  [void]$mappingSectionLines.Add($mappingSectionHeader)
+  [void]$mappingSectionLines.Add("")
+  [void]$mappingSectionLines.Add("**Core Concepts**")
+  $mappingConceptItems = @($lessonItems | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -First 8)
+  if ($mappingConceptItems.Count -eq 0 -and -not [string]::IsNullOrWhiteSpace($Concept)) {
+    $mappingConceptItems = @($Concept -split ',' | ForEach-Object { $_.Trim() } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -First 8)
+  }
+  if ($mappingConceptItems.Count -eq 0) {
+    $mappingConceptItems = @("Chapter concept coverage in progress")
+  }
+  foreach ($conceptItem in $mappingConceptItems) {
+    [void]$mappingSectionLines.Add("- $conceptItem")
+  }
+  [void]$mappingSectionLines.Add("")
+  [void]$mappingSectionLines.Add("**OWASP Connection**")
+  [void]$mappingSectionLines.Add("- **$owaspSectionLabel**")
+  [void]$mappingSectionLines.Add("- Connection: chapter concepts are mapped to this OWASP area for practical secure coding behavior.")
+  [void]$mappingSectionLines.Add("")
+  [void]$mappingSectionLines.Add("**Portfolio Application**")
+  [void]$mappingSectionLines.Add("- Apply Chapter $statusChapter concepts in secure coding exercises and repo artifacts.")
+  [void]$mappingSectionLines.Add("- Keep chapter mappings synchronized with logs, notes, and roadmap updates.")
+  [void]$mappingSectionLines.Add("")
+
+  $securityLines.InsertRange($mappingInsertAt, $mappingSectionLines)
+
+  $matrixHeaderIndex = Find-LineIndex -Lines $securityLines -Predicate { param($line) $line.Trim() -eq '| Chapter | OWASP Focus |' }
+  if ($matrixHeaderIndex -ge 0) {
+    $matrixSeparatorIndex = Find-LineIndex -Lines $securityLines -Predicate { param($line) $line.Trim() -match '^\|[-\s|]+\|$' } -StartIndex ($matrixHeaderIndex + 1)
+    if ($matrixSeparatorIndex -ge 0) {
+      $matrixEnd = $securityLines.Count
+      for ($i = $matrixSeparatorIndex + 1; $i -lt $securityLines.Count; $i++) {
+        $trimmed = $securityLines[$i].Trim()
+        if ([string]::IsNullOrWhiteSpace($trimmed) -or $trimmed -notmatch '^\|') {
+          $matrixEnd = $i
+          break
+        }
+      }
+
+      $matrixRows = @()
+      for ($i = $matrixSeparatorIndex + 1; $i -lt $matrixEnd; $i++) {
+        if ($securityLines[$i] -match '^\|\s*(\d+)\s+([^|]+?)\s*\|\s*([^|]+?)\s*\|') {
+          $matrixRows += [pscustomobject]@{
+            Chapter = [int]$matches[1]
+            Topic = $matches[2].Trim()
+            Focus = $matches[3].Trim()
+          }
+        }
+      }
+
+      $currentMatrixCodes = @(Get-OwaspCodesFromText -Text "$SecurityConnection $Security")
+      if ($currentMatrixCodes.Count -eq 0 -and $chapterSecurityDefaults.ContainsKey($statusChapter)) {
+        $currentMatrixCodes = @(Get-OwaspCodesFromText -Text $chapterSecurityDefaults[$statusChapter])
+      }
+      $currentMatrixFocus = if ($currentMatrixCodes.Count -gt 0) { $currentMatrixCodes -join ', ' } else { "TBD" }
+
+      $updatedRows = @()
+      $rowUpdated = $false
+      foreach ($row in $matrixRows) {
+        if ($row.Chapter -eq $statusChapter) {
+          $updatedRows += [pscustomobject]@{ Chapter = $statusChapter; Topic = $statusChapterTitle; Focus = $currentMatrixFocus }
+          $rowUpdated = $true
+        } else {
+          $updatedRows += $row
+        }
+      }
+      if (-not $rowUpdated) {
+        $updatedRows += [pscustomobject]@{ Chapter = $statusChapter; Topic = $statusChapterTitle; Focus = $currentMatrixFocus }
+      }
+
+      $updatedRows = @($updatedRows | Sort-Object Chapter)
+      $renderedRows = [System.Collections.Generic.List[string]]::new()
+      foreach ($row in $updatedRows) {
+        [void]$renderedRows.Add("| $($row.Chapter) $($row.Topic) | $($row.Focus) |")
+      }
+
+      if ($matrixEnd -gt ($matrixSeparatorIndex + 1)) {
+        $securityLines.RemoveRange($matrixSeparatorIndex + 1, $matrixEnd - ($matrixSeparatorIndex + 1))
+      }
+      if ($renderedRows.Count -gt 0) {
+        $securityLines.InsertRange($matrixSeparatorIndex + 1, $renderedRows)
+      }
+    }
+  }
+
+  Set-Content -Path $securityMappingPath -Value $securityLines -Encoding UTF8
+  Write-Host "Updated security mapping sections: $securityMappingPath"
+}
+
+$pythonSecurityNotesPath = Join-Path $notesPath "python-security-notes.md"
+if ((Test-Path $pythonSecurityNotesPath) -and $statusChapter -and -not [string]::IsNullOrWhiteSpace($statusChapterTitle) -and $hasSpecificLearningPayload) {
+  $pythonSecurityNotesLines = [System.Collections.Generic.List[string]](Get-Content -Path $pythonSecurityNotesPath -Encoding UTF8)
+  $notesTitleIndex = Find-LineIndex -Lines $pythonSecurityNotesLines -Predicate { param($line) $line -match '^# Python Security Notes \(Chapters \d+\-\d+\)' }
+  if ($notesTitleIndex -ge 0) {
+    $pythonSecurityNotesLines[$notesTitleIndex] = "# Python Security Notes (Chapters 1-$statusChapter)"
+  }
+
+  $chapterNotesHeader = "## Chapter ${statusChapter}: $statusChapterTitle"
+  $chapterNotesStart = Find-LineIndex -Lines $pythonSecurityNotesLines -Predicate { param($line) $line.Trim() -eq $chapterNotesHeader }
+  if ($chapterNotesStart -lt 0) {
+    $chapterNotesStart = Find-LineIndex -Lines $pythonSecurityNotesLines -Predicate { param($line) $line -match "^## Chapter\s+$statusChapter\s*:" }
+  }
+
+  $crosswalkHeaderIndex = Find-LineIndex -Lines $pythonSecurityNotesLines -Predicate { param($line) $line -match '^## OWASP Crosswalk \(Quick\)' }
+  if ($crosswalkHeaderIndex -lt 0) {
+    $crosswalkHeaderIndex = $pythonSecurityNotesLines.Count
+  }
+
+  if ($chapterNotesStart -ge 0) {
+    $chapterNotesEnd = $pythonSecurityNotesLines.Count
+    for ($i = $chapterNotesStart + 1; $i -lt $pythonSecurityNotesLines.Count; $i++) {
+      if ($pythonSecurityNotesLines[$i] -match '^##\s+Chapter\s+' -or $pythonSecurityNotesLines[$i] -match '^##\s+OWASP Crosswalk \(Quick\)') {
+        $chapterNotesEnd = $i
+        break
+      }
+    }
+    $pythonSecurityNotesLines.RemoveRange($chapterNotesStart, $chapterNotesEnd - $chapterNotesStart)
+    $crosswalkHeaderIndex = $chapterNotesStart
+  }
+
+  $chapterConceptsText = Get-ChapterTrackDetail -Summary $ChapterSummary -ConceptItems $lessonItems -FallbackConcept $Concept
+  $chapterSecurityUseText = if (-not [string]::IsNullOrWhiteSpace($SecurityConnection)) {
+    "practical chapter application aligned to $SecurityConnection."
+  } else {
+    "practical chapter application aligned to secure coding outcomes."
+  }
+
+  $chapterNotesLines = [System.Collections.Generic.List[string]]::new()
+  [void]$chapterNotesLines.Add($chapterNotesHeader)
+  [void]$chapterNotesLines.Add("")
+  [void]$chapterNotesLines.Add("**Concepts:** $chapterConceptsText.")
+  [void]$chapterNotesLines.Add("")
+  [void]$chapterNotesLines.Add("**Security use:** $chapterSecurityUseText")
+  [void]$chapterNotesLines.Add("")
+
+  $pythonSecurityNotesLines.InsertRange($crosswalkHeaderIndex, $chapterNotesLines)
+
+  $crosswalkHeaderIndex = Find-LineIndex -Lines $pythonSecurityNotesLines -Predicate { param($line) $line -match '^## OWASP Crosswalk \(Quick\)' }
+  if ($crosswalkHeaderIndex -ge 0) {
+    $crosswalkEnd = $pythonSecurityNotesLines.Count
+    for ($i = $crosswalkHeaderIndex + 1; $i -lt $pythonSecurityNotesLines.Count; $i++) {
+      if ($pythonSecurityNotesLines[$i] -match '^##\s+') {
+        $crosswalkEnd = $i
+        break
+      }
+    }
+
+    $crosswalkLine = "- CH$statusChapter $rightArrow "
+    $crosswalkCodes = @(Get-OwaspCodesFromText -Text "$SecurityConnection $Security")
+    if ($crosswalkCodes.Count -eq 0 -and $chapterSecurityDefaults.ContainsKey($statusChapter)) {
+      $crosswalkCodes = @(Get-OwaspCodesFromText -Text $chapterSecurityDefaults[$statusChapter])
+    }
+    if ($crosswalkCodes.Count -gt 0) {
+      $crosswalkLine += ($crosswalkCodes -join '/')
+    } else {
+      $crosswalkLine += "TBD"
+    }
+
+    $crosswalkTargetIndex = -1
+    for ($i = $crosswalkHeaderIndex + 1; $i -lt $crosswalkEnd; $i++) {
+      if ($pythonSecurityNotesLines[$i] -match "^- CH$statusChapter\s+") {
+        $crosswalkTargetIndex = $i
+        break
+      }
+    }
+
+    if ($crosswalkTargetIndex -ge 0) {
+      $pythonSecurityNotesLines[$crosswalkTargetIndex] = $crosswalkLine
+    } else {
+      $insertCrosswalkAt = $crosswalkHeaderIndex + 1
+      while ($insertCrosswalkAt -lt $crosswalkEnd -and $pythonSecurityNotesLines[$insertCrosswalkAt] -match '^- CH\d+') {
+        $insertCrosswalkAt++
+      }
+      $pythonSecurityNotesLines.Insert($insertCrosswalkAt, $crosswalkLine)
+    }
+  }
+
+  Set-Content -Path $pythonSecurityNotesPath -Value $pythonSecurityNotesLines -Encoding UTF8
+  Write-Host "Updated notes file: $pythonSecurityNotesPath"
+}
+
+$debuggingNotesPath = Join-Path $notesPath "debugging-notes.md"
+if (Test-Path $debuggingNotesPath) {
+  $debuggingNotesLines = [System.Collections.Generic.List[string]](Get-Content -Path $debuggingNotesPath -Encoding UTF8)
+  $latestSyncHeader = "## Latest Learning Sync"
+  $latestSyncStart = Find-LineIndex -Lines $debuggingNotesLines -Predicate { param($line) $line.Trim() -eq $latestSyncHeader }
+  if ($latestSyncStart -ge 0) {
+    $latestSyncEnd = $debuggingNotesLines.Count
+    for ($i = $latestSyncStart + 1; $i -lt $debuggingNotesLines.Count; $i++) {
+      if ($debuggingNotesLines[$i] -match '^##\s+') {
+        $latestSyncEnd = $i
+        break
+      }
+    }
+    $debuggingNotesLines.RemoveRange($latestSyncStart, $latestSyncEnd - $latestSyncStart)
+  } else {
+    if ($debuggingNotesLines.Count -gt 0 -and -not [string]::IsNullOrWhiteSpace($debuggingNotesLines[$debuggingNotesLines.Count - 1])) {
+      [void]$debuggingNotesLines.Add("")
+    }
+    $latestSyncStart = $debuggingNotesLines.Count
+  }
+
+  $latestSyncLines = [System.Collections.Generic.List[string]]::new()
+  [void]$latestSyncLines.Add($latestSyncHeader)
+  [void]$latestSyncLines.Add("")
+  [void]$latestSyncLines.Add("- **Date:** $entryDateText")
+  if (-not [string]::IsNullOrWhiteSpace($ChapterFocus)) {
+    [void]$latestSyncLines.Add("- **Chapter focus:** $ChapterFocus")
+  }
+  if (-not [string]::IsNullOrWhiteSpace($SecurityConnection)) {
+    [void]$latestSyncLines.Add("- **Security mapping:** $SecurityConnection")
+  }
+  [void]$latestSyncLines.Add("")
+
+  $debuggingNotesLines.InsertRange($latestSyncStart, $latestSyncLines)
+  Set-Content -Path $debuggingNotesPath -Value $debuggingNotesLines -Encoding UTF8
+  Write-Host "Updated notes file: $debuggingNotesPath"
 }
 
 $journeyReadmePath = Join-Path $projectsRoot "bootdev-security-journey\README.md"
@@ -928,6 +1403,19 @@ if (Test-Path $journeyReadmePath) {
 
   Set-Content -Path $journeyReadmePath -Value $journeyLines -Encoding UTF8
   Write-Host "Updated README activity sections: $journeyReadmePath"
+}
+
+$journeyRoadmapPath = Join-Path $projectsRoot "bootdev-security-journey\roadmap.md"
+if (Test-Path $journeyRoadmapPath) {
+  $journeyRoadmapLines = [System.Collections.Generic.List[string]](Get-Content -Path $journeyRoadmapPath -Encoding UTF8)
+  for ($i = 0; $i -lt $journeyRoadmapLines.Count; $i++) {
+    if ($journeyRoadmapLines[$i] -match '^(\*\*Status:\*\*\s+🔄\s+In Progress\s*\([A-Za-z]+\s+\d{1,2},\s+\d{4}\s*-\s*)(\?|[A-Za-z]+\s+\d{1,2},\s+\d{4})(\).*)$') {
+      $journeyRoadmapLines[$i] = "$($matches[1])$entryDateText$($matches[3])"
+    }
+  }
+
+  Set-Content -Path $journeyRoadmapPath -Value $journeyRoadmapLines -Encoding UTF8
+  Write-Host "Updated roadmap status dates: $journeyRoadmapPath"
 }
 
 powershell -ExecutionPolicy Bypass -File $syncScript -Message $Message
