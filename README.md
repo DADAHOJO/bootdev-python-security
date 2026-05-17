@@ -85,10 +85,25 @@ From the `scripts/` folder:
 ```
 
 This will:
-- OCR today’s screenshots from `Boot.Dev screenshots/`
+- OCR today’s screenshots from `Boot.Dev-screenshots/`
 - Auto-map OWASP security category format
 - Append progress entries and update README activity sections
 - Commit, rebase, and push all repos
+
+#### OCR setup (one-time)
+
+The root launcher uses `py -3.11` with `EasyOCR` for screenshot extraction.
+
+```powershell
+py -3.11 -m pip install --upgrade pip
+py -3.11 -m pip install easyocr
+```
+
+Verify Python 3.11 is available:
+
+```powershell
+py -3.11 --version
+```
 
 ### 2) Manual daily run
 
