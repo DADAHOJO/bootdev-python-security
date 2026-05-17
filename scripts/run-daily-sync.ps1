@@ -40,6 +40,7 @@ if ([string]::IsNullOrWhiteSpace($projectsRoot)) {
 
 $syncScript = Join-Path $projectsRoot "bootdev-python-security\scripts\daily-sync.ps1"
 $messageScript = Join-Path $projectsRoot "bootdev-python-security\scripts\generate-commit-message.ps1"
+$pythonOcrScript = Join-Path $projectsRoot "bootdev-python-security\scripts\ocr-extract.py"
 
 if (-not (Test-Path $syncScript)) {
   Write-Error "Sync script not found: $syncScript"
@@ -47,58 +48,215 @@ if (-not (Test-Path $syncScript)) {
 }
 
 $defaultOwasp = "A09: Security Logging and Monitoring Failures"
-$defaultScreenshotDir = Join-Path $projectsRoot "Boot.Dev screenshots"
+$defaultScreenshotDir = Join-Path $projectsRoot "Boot.Dev-screenshots"
 if ([string]::IsNullOrWhiteSpace($ScreenshotDir)) {
   $ScreenshotDir = $defaultScreenshotDir
 }
 
+if ([string]::IsNullOrWhiteSpace($TesseractPath)) {
+  $TesseractPath = "tesseract"
+}
+
+$candidateTesseractPaths = @($TesseractPath)
+if ($TesseractPath -eq "tesseract") {
+  $tesseractFromPath = Get-Command tesseract -ErrorAction SilentlyContinue
+  if ($tesseractFromPath -and -not [string]::IsNullOrWhiteSpace($tesseractFromPath.Source)) {
+    $candidateTesseractPaths += $tesseractFromPath.Source
+  }
+
+  if (-not [string]::IsNullOrWhiteSpace($env:ProgramFiles)) {
+    $candidateTesseractPaths += (Join-Path $env:ProgramFiles "Tesseract-OCR\tesseract.exe")
+  }
+
+  $programFilesX86 = ${env:ProgramFiles(x86)}
+  if (-not [string]::IsNullOrWhiteSpace($programFilesX86)) {
+    $candidateTesseractPaths += (Join-Path $programFilesX86 "Tesseract-OCR\tesseract.exe")
+  }
+
+  $candidateTesseractPaths += (Join-Path $projectsRoot "tesseract\tesseract.exe")
+  $candidateTesseractPaths += (Join-Path $projectsRoot "Tesseract\tesseract.exe")
+  $candidateTesseractPaths += (Join-Path $env:USERPROFILE "OneDrive - Dell Technologies\Study Material & Cert\Server Support Program\tesseract\Tesseract.exe")
+}
+
+$validTesseractPaths = @(
+  $candidateTesseractPaths |
+    Where-Object { -not [string]::IsNullOrWhiteSpace($_) -and (Test-Path $_) } |
+    Select-Object -Unique
+)
+if ($validTesseractPaths.Count -gt 0) {
+  $TesseractPath = $validTesseractPaths |
+    Sort-Object {
+      $rawVersion = (Get-Item $_).VersionInfo.ProductVersion
+      $cleanVersion = if ($rawVersion -match '^\d+(\.\d+){1,3}') { $matches[0] } else { "0.0.0.0" }
+      [version]$cleanVersion
+    } -Descending |
+    Select-Object -First 1
+}
+
 if (([string]::IsNullOrWhiteSpace($Chapter) -or [string]::IsNullOrWhiteSpace($ChapterTitle) -or [string]::IsNullOrWhiteSpace($Concept)) -and (-not $ScreenshotPaths -or $ScreenshotPaths.Count -eq 0)) {
   if (Test-Path $ScreenshotDir) {
-    $ScreenshotPaths = Get-ChildItem -Path $ScreenshotDir -File -Include *.png,*.jpg,*.jpeg,*.bmp,*.gif |
-      Where-Object { $_.LastWriteTime.Date -eq $EntryDate.Date } |
-      Sort-Object LastWriteTime |
-      Select-Object -ExpandProperty FullName
+    $imageFiles = Get-ChildItem -Path $ScreenshotDir -File |
+      Where-Object { $_.Extension -match '^\.(png|jpg|jpeg|bmp|gif)$' } |
+      Sort-Object LastWriteTime
+    if ($imageFiles.Count -gt 0) {
+      $todayDate = $EntryDate.Date
+      $todayFiles = $imageFiles | Where-Object { $_.LastWriteTime.Date -eq $todayDate }
+      $previousFiles = $imageFiles | Where-Object { $_.LastWriteTime.Date -ne $todayDate }
+      $usePrevious = $false
+      $choice = Read-Host "Use screenshots from [T]oday or [P]revious date? (default T)"
+      if ($choice -match '^(?i)p') {
+        $usePrevious = $true
+      }
+
+      if ($usePrevious) {
+        $previousDates = $previousFiles |
+          Group-Object { $_.LastWriteTime.Date.ToString("yyyy-MM-dd") } |
+          Where-Object { -not [string]::IsNullOrWhiteSpace($_.Name) } |
+          Sort-Object Name
+        if (-not $previousDates -or $previousDates.Count -eq 0) {
+          Write-Host "No previous screenshots found. Using today's screenshots if available."
+          $usePrevious = $false
+        } else {
+          Write-Host "Available previous dates:"
+          for ($i = 0; $i -lt $previousDates.Count; $i++) {
+            Write-Host ("{0}. {1}" -f ($i + 1), $previousDates[$i].Name)
+          }
+
+          $dateChoice = Read-Host "Select a date number (or type a date yyyy-MM-dd)"
+          $selectedDateKey = $null
+          if ($dateChoice -match '^\d+$' -and [int]$dateChoice -ge 1 -and [int]$dateChoice -le $previousDates.Count) {
+            $selectedDateKey = $previousDates[[int]$dateChoice - 1].Name
+          } elseif (-not [string]::IsNullOrWhiteSpace($dateChoice) -and ($previousDates.Name -contains $dateChoice)) {
+            $selectedDateKey = $dateChoice
+          }
+
+          if (-not $selectedDateKey) {
+            $selectedDateKey = $previousDates[$previousDates.Count - 1].Name
+          }
+
+          $ScreenshotPaths = $previousFiles |
+            Where-Object { $_.LastWriteTime.Date.ToString("yyyy-MM-dd") -eq $selectedDateKey } |
+            Sort-Object LastWriteTime |
+            Select-Object -ExpandProperty FullName
+        }
+      }
+
+      if (-not $usePrevious) {
+        $ScreenshotPaths = $todayFiles |
+          Sort-Object LastWriteTime |
+          Select-Object -ExpandProperty FullName
+      }
+    }
   }
 }
 
 if ($ScreenshotPaths -and $ScreenshotPaths.Count -gt 0) {
-  $tesseractCommand = Get-Command $TesseractPath -ErrorAction SilentlyContinue
-  if ($tesseractCommand) {
-    $ocrText = ""
-    foreach ($path in $ScreenshotPaths) {
-      if (-not (Test-Path $path)) {
-        Write-Host "Screenshot not found: $path"
-        continue
-      }
+  $needsOcr = [string]::IsNullOrWhiteSpace($Chapter) -or [string]::IsNullOrWhiteSpace($ChapterTitle) -or [string]::IsNullOrWhiteSpace($Concept)
+  $pythonInstallHint = "Install EasyOCR for Python 3.11: py -3.11 -m pip install --upgrade pip ; py -3.11 -m pip install easyocr"
 
-      $ocrText += (& $TesseractPath $path stdout 2>$null)
-      $ocrText += "`n"
-    }
+  if ($needsOcr -and (Test-Path $pythonOcrScript)) {
+    $pythonLauncher = $null
+    $pythonPrefixArgs = @()
 
-    $ocrLines = $ocrText -split "`r?`n" | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne "" }
-    foreach ($line in $ocrLines) {
-      if ([string]::IsNullOrWhiteSpace($Chapter) -and $line -match '(?i)\bCH\s*(\d{1,2})\s*[:\-]\s*(.+)$') {
-        $Chapter = $matches[1]
-        $ChapterTitle = $matches[2].Trim()
-        continue
+    $pyCommand = Get-Command py -ErrorAction SilentlyContinue
+    if ($pyCommand) {
+      & $pyCommand.Source -3.11 --version *> $null
+      if ($LASTEXITCODE -eq 0) {
+        $pythonLauncher = $pyCommand.Source
+        $pythonPrefixArgs = @("-3.11")
       }
     }
 
-    $lessonItems = @()
-    foreach ($line in $ocrLines) {
-      if ($line -match '^\s*\d+\s*[:\-]\s*(.+)$') {
-        $lesson = $matches[1].Trim()
-        if (-not [string]::IsNullOrWhiteSpace($lesson)) {
-          $lessonItems += $lesson
+    if ($pythonLauncher) {
+      $pythonArgs = @()
+      $pythonArgs += $pythonPrefixArgs
+      $pythonArgs += @($pythonOcrScript)
+      foreach ($path in $ScreenshotPaths) {
+        $pythonArgs += @("--screenshot", $path)
+      }
+
+      $pythonOutput = & $pythonLauncher @pythonArgs 2>$null
+      $pythonJson = ($pythonOutput | Out-String).Trim()
+      if (-not [string]::IsNullOrWhiteSpace($pythonJson)) {
+        try {
+          $pythonResult = $pythonJson | ConvertFrom-Json
+          if ([string]::IsNullOrWhiteSpace($Chapter) -and -not [string]::IsNullOrWhiteSpace($pythonResult.chapter)) {
+            $Chapter = $pythonResult.chapter
+          }
+
+          if ([string]::IsNullOrWhiteSpace($ChapterTitle) -and -not [string]::IsNullOrWhiteSpace($pythonResult.chapterTitle)) {
+            $ChapterTitle = $pythonResult.chapterTitle
+          }
+
+          if ([string]::IsNullOrWhiteSpace($Concept) -and -not [string]::IsNullOrWhiteSpace($pythonResult.concept)) {
+            $Concept = $pythonResult.concept
+          }
+
+          if ((-not [string]::IsNullOrWhiteSpace($Chapter) -or -not [string]::IsNullOrWhiteSpace($ChapterTitle) -or -not [string]::IsNullOrWhiteSpace($Concept))) {
+            Write-Host "Extracted screenshot text using Python OCR helper."
+          } elseif ($pythonResult.error -eq "easyocr_not_installed") {
+            Write-Host "EasyOCR not installed. Falling back to Tesseract/manual input."
+            Write-Host $pythonInstallHint
+          }
+        } catch {
+          Write-Host "Python OCR output could not be parsed. Falling back to Tesseract/manual input."
         }
       }
+    } else {
+      Write-Host "Python 3.11 not found via py launcher. Falling back to Tesseract/manual input."
+      Write-Host $pythonInstallHint
+    }
+  }
+
+  $needsOcr = [string]::IsNullOrWhiteSpace($Chapter) -or [string]::IsNullOrWhiteSpace($ChapterTitle) -or [string]::IsNullOrWhiteSpace($Concept)
+  if ($needsOcr) {
+    $tesseractExecutable = $null
+    if (Test-Path $TesseractPath -PathType Leaf) {
+      $tesseractExecutable = $TesseractPath
+    } else {
+      $tesseractCommand = Get-Command $TesseractPath -ErrorAction SilentlyContinue
+      if ($tesseractCommand) {
+        $tesseractExecutable = $tesseractCommand.Source
+      }
     }
 
-    if ($lessonItems.Count -gt 0 -and [string]::IsNullOrWhiteSpace($Concept)) {
-      $Concept = ($lessonItems | Select-Object -Unique) -join ", "
+    if ($tesseractExecutable) {
+      $ocrText = ""
+      foreach ($path in $ScreenshotPaths) {
+        if (-not (Test-Path $path)) {
+          Write-Host "Screenshot not found: $path"
+          continue
+        }
+
+        $ocrText += (& $tesseractExecutable $path stdout 2>$null)
+        $ocrText += "`n"
+      }
+
+      $ocrLines = $ocrText -split "`r?`n" | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne "" }
+      foreach ($line in $ocrLines) {
+        if ([string]::IsNullOrWhiteSpace($Chapter) -and $line -match '(?i)\bCH\s*(\d{1,2})\s*[:\-]\s*(.+)$') {
+          $Chapter = $matches[1]
+          $ChapterTitle = $matches[2].Trim()
+          continue
+        }
+      }
+
+      $lessonItems = @()
+      foreach ($line in $ocrLines) {
+        if ($line -match '^\s*\d+\s*[:\-]\s*(.+)$') {
+          $lesson = $matches[1].Trim()
+          if (-not [string]::IsNullOrWhiteSpace($lesson)) {
+            $lessonItems += $lesson
+          }
+        }
+      }
+
+      if ($lessonItems.Count -gt 0 -and [string]::IsNullOrWhiteSpace($Concept)) {
+        $Concept = ($lessonItems | Select-Object -Unique) -join ", "
+      }
+    } else {
+      Write-Host "Tesseract not found. Falling back to manual input."
     }
-  } else {
-    Write-Host "Tesseract not found. Falling back to manual input."
   }
 }
 
