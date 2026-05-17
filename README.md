@@ -43,6 +43,9 @@ bootdev-python-security/
     +-- chapter-lesson-summary.md
     +-- debugging-notes.md
     +-- python-security-notes.md
+    +-- chapter-lesson-summary.md
+    +-- debugging-notes.md
+    +-- python-security-notes.md
     ├── chapter-lesson-summary.md
     ├── python-security-notes.md
     └── debugging-notes.md
