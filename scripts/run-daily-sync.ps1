@@ -323,21 +323,103 @@ $activityWord = if ($StreakActivity -eq 1) { "activity" } else { "activities" }
 $entryDateText = $EntryDate.ToString("MMMM d, yyyy")
 $entryMonthHeader = "## $($EntryDate.ToString("MMMM yyyy"))"
 $entryHeaderLine = "### $entryDateText"
-$entryDetailLines = @(
-  "- **Streak Activity:** $StreakActivity Boot.dev/GitHub $activityWord",
-  "- **Chapter Focus:** $ChapterFocus",
-  "- **Lesson Concepts Covered:** $LessonConceptsCovered",
-  "- **Security Connection:** $SecurityConnection"
-)
-$entryMarkdownLines = @($entryHeaderLine) + $entryDetailLines + @("")
-$entryMarkdownBlock = ($entryMarkdownLines -join [Environment]::NewLine)
-$legacyEntryLines = @(
-  $entryDateText,
-  "Streak Activity: $StreakActivity Boot.dev/GitHub $activityWord",
-  "Chapter Focus: $ChapterFocus",
-  "Lesson Concepts Covered: $LessonConceptsCovered",
-  "Security Connection: $SecurityConnection"
-)
+
+function Format-ActiveDaysList {
+  param([datetime[]]$Dates)
+
+  $sortedDates = @($Dates | Sort-Object -Unique)
+  if ($sortedDates.Count -eq 0) {
+    return ""
+  }
+
+  $groups = $sortedDates | Group-Object { "{0}-{1}" -f $_.Year, $_.Month }
+  $segments = @()
+  foreach ($group in ($groups | Sort-Object Name)) {
+    $groupDates = @($group.Group | Sort-Object)
+    if ($groupDates.Count -eq 0) {
+      continue
+    }
+
+    $monthName = $groupDates[0].ToString("MMMM")
+    $yearValue = $groupDates[0].Year
+    $daysText = ($groupDates | ForEach-Object { $_.Day }) -join ", "
+    $segments += "$monthName $daysText ($yearValue)"
+  }
+
+  return ($segments -join "; ")
+}
+
+function Get-ProgressSnapshot {
+  param([string]$ProgressLogPath)
+
+  $snapshot = [ordered]@{
+    ActiveDates = @()
+    ChapterRecords = @()
+    MaxChapter = $null
+    MaxChapterTitle = ""
+  }
+
+  if (-not (Test-Path $ProgressLogPath)) {
+    return [pscustomobject]$snapshot
+  }
+
+  $lines = Get-Content -Path $ProgressLogPath
+  $currentDate = $null
+  foreach ($line in $lines) {
+    $trimmed = $line.Trim()
+
+    if ($trimmed -match '^###\s+([A-Za-z]+\s+\d{1,2},\s+\d{4})$') {
+      try {
+        $currentDate = (Get-Date $matches[1]).Date
+        $snapshot.ActiveDates += $currentDate
+      } catch {
+        $currentDate = $null
+      }
+      continue
+    }
+
+    if (-not $currentDate) {
+      continue
+    }
+
+    $chapterNumber = $null
+    $chapterTitle = ""
+    if ($trimmed -match 'Chapter\s+(\d+)\s*-\s*([^\|]+)$') {
+      $chapterNumber = [int]$matches[1]
+      $chapterTitle = $matches[2].Trim()
+    } elseif ($trimmed -match 'Chapter\s+(\d+)\s*\(([^\)]+)\)') {
+      $chapterNumber = [int]$matches[1]
+      $chapterTitle = $matches[2].Trim()
+    } elseif ($trimmed -match 'Chapter\s+(\d+)') {
+      $chapterNumber = [int]$matches[1]
+    }
+
+    if ($chapterNumber) {
+      $snapshot.ChapterRecords += [pscustomobject]@{
+        Chapter = $chapterNumber
+        Title = $chapterTitle
+        Date = $currentDate
+      }
+    }
+  }
+
+  $snapshot.ActiveDates = @($snapshot.ActiveDates | Sort-Object -Unique)
+
+  if ($snapshot.ChapterRecords.Count -gt 0) {
+    $maxChapter = ($snapshot.ChapterRecords | Measure-Object -Property Chapter -Maximum).Maximum
+    $snapshot.MaxChapter = [int]$maxChapter
+
+    $maxRecords = @($snapshot.ChapterRecords | Where-Object { $_.Chapter -eq $maxChapter } | Sort-Object Date)
+    if ($maxRecords.Count -gt 0) {
+      $preferredTitle = ($maxRecords | Where-Object { -not [string]::IsNullOrWhiteSpace($_.Title) } | Select-Object -Last 1)
+      if ($preferredTitle) {
+        $snapshot.MaxChapterTitle = $preferredTitle.Title
+      }
+    }
+  }
+
+  return [pscustomobject]$snapshot
+}
 
 $progressLogs = @(
   (Join-Path $projectsRoot "bootdev-python-security\progress-log.md"),
@@ -349,6 +431,33 @@ foreach ($progressLog in $progressLogs) {
     Write-Host "Skipping missing progress log: $progressLog"
     continue
   }
+
+  $isJourneyLog = $progressLog -like "*bootdev-security-journey*"
+  if ($isJourneyLog) {
+    $entryDetailLines = @(
+      "- **Boot.dev/GitHub Activity:** $StreakActivity",
+      "- **Progress Sync:** $ChapterFocus",
+      "- **Security Focus:** $SecurityConnection"
+    )
+  } else {
+    $entryDetailLines = @(
+      "- **Streak Activity:** $StreakActivity Boot.dev/GitHub $activityWord",
+      "- **Chapter Focus:** $ChapterFocus",
+      "- **Lesson Concepts Covered:** $LessonConceptsCovered",
+      "- **Security Connection:** $SecurityConnection"
+    )
+  }
+
+  $entryMarkdownLines = @($entryHeaderLine) + $entryDetailLines + @("")
+  $entryMarkdownBlock = ($entryMarkdownLines -join [Environment]::NewLine)
+
+  $legacyEntryLines = @(
+    $entryDateText,
+    "Streak Activity: $StreakActivity Boot.dev/GitHub $activityWord",
+    "Chapter Focus: $ChapterFocus",
+    "Lesson Concepts Covered: $LessonConceptsCovered",
+    "Security Connection: $SecurityConnection"
+  )
 
   $logLines = [System.Collections.Generic.List[string]](Get-Content -Path $progressLog)
   $existingContent = ($logLines -join [Environment]::NewLine)
@@ -432,6 +541,63 @@ foreach ($progressLog in $progressLogs) {
   Write-Host "Upserted progress entry in: $progressLog"
 }
 
+$pythonProgressLogPath = Join-Path $projectsRoot "bootdev-python-security\progress-log.md"
+$journeyProgressLogPath = Join-Path $projectsRoot "bootdev-security-journey\progress-log.md"
+$pythonSnapshot = Get-ProgressSnapshot -ProgressLogPath $pythonProgressLogPath
+$journeySnapshot = Get-ProgressSnapshot -ProgressLogPath $journeyProgressLogPath
+$pythonActiveDaysText = Format-ActiveDaysList -Dates $pythonSnapshot.ActiveDates
+$journeyActiveDaysText = Format-ActiveDaysList -Dates $journeySnapshot.ActiveDates
+
+if (Test-Path $pythonProgressLogPath) {
+  $pythonProgressLines = [System.Collections.Generic.List[string]](Get-Content -Path $pythonProgressLogPath)
+  if ($pythonSnapshot.MaxChapter) {
+    $courseSummaryIndex = $pythonProgressLines.FindIndex({ $_ -match '^## Course Summary' })
+    if ($courseSummaryIndex -ge 0) {
+      if (-not [string]::IsNullOrWhiteSpace($pythonSnapshot.MaxChapterTitle)) {
+        $pythonProgressLines[$courseSummaryIndex] = "## Course Summary (Through Chapter $($pythonSnapshot.MaxChapter) - $($pythonSnapshot.MaxChapterTitle))"
+      } else {
+        $pythonProgressLines[$courseSummaryIndex] = "## Course Summary (Through Chapter $($pythonSnapshot.MaxChapter))"
+      }
+    }
+
+    $chaptersCompletedIndex = $pythonProgressLines.FindIndex({ $_ -match '^- \*\*Chapters Completed:\*\*' })
+    if ($chaptersCompletedIndex -ge 0) {
+      if (-not [string]::IsNullOrWhiteSpace($pythonSnapshot.MaxChapterTitle)) {
+        $pythonProgressLines[$chaptersCompletedIndex] = "- **Chapters Completed:** $($pythonSnapshot.MaxChapter)/$($pythonSnapshot.MaxChapter) (Introduction → $($pythonSnapshot.MaxChapterTitle))"
+      } else {
+        $pythonProgressLines[$chaptersCompletedIndex] = "- **Chapters Completed:** $($pythonSnapshot.MaxChapter)/$($pythonSnapshot.MaxChapter)"
+      }
+    }
+  }
+
+  $activeDaysLoggedIndex = $pythonProgressLines.FindIndex({ $_ -match '^- \*\*Active Days Logged:\*\*' })
+  if ($activeDaysLoggedIndex -ge 0) {
+    $pythonProgressLines[$activeDaysLoggedIndex] = "- **Active Days Logged:** $(@($pythonSnapshot.ActiveDates).Count) days"
+  }
+
+  Set-Content -Path $pythonProgressLogPath -Value $pythonProgressLines
+}
+
+if (Test-Path $journeyProgressLogPath) {
+  $journeyProgressLines = [System.Collections.Generic.List[string]](Get-Content -Path $journeyProgressLogPath)
+  if ($journeySnapshot.MaxChapter) {
+    $journeyCourseIndex = $journeyProgressLines.FindIndex({ $_ -match '^- \*\*Learn to Code in Python:\*\*' })
+    if ($journeyCourseIndex -ge 0) {
+      $journeyProgressLines[$journeyCourseIndex] = "- **Learn to Code in Python:** Chapters 1-$($journeySnapshot.MaxChapter) completed and synced to GitHub docs"
+    }
+  }
+
+  $journeyActiveIndex = $journeyProgressLines.FindIndex({ $_ -match '^- \*\*Active days represented:\*\*' })
+  if ($journeyActiveIndex -ge 0 -and -not [string]::IsNullOrWhiteSpace($journeyActiveDaysText)) {
+    $journeyProgressLines[$journeyActiveIndex] = "- **Active days represented:** $journeyActiveDaysText"
+  }
+
+  Set-Content -Path $journeyProgressLogPath -Value $journeyProgressLines
+}
+
+$statusChapter = if (-not [string]::IsNullOrWhiteSpace($Chapter) -and $Chapter -match '^\d+$') { [int]$Chapter } else { $pythonSnapshot.MaxChapter }
+$statusChapterTitle = if (-not [string]::IsNullOrWhiteSpace($ChapterTitle)) { $ChapterTitle } else { $pythonSnapshot.MaxChapterTitle }
+
 $pythonRepo = Join-Path $projectsRoot "bootdev-python-security"
 $readmePath = Join-Path $pythonRepo "README.md"
 $chaptersPath = Join-Path $pythonRepo "chapters"
@@ -450,32 +616,17 @@ if (Test-Path $readmePath) {
   $noteLinePattern = '^\s{4}(' + [regex]::Escape($treeBranch) + '|' + [regex]::Escape($treeEnd) + ')' + [regex]::Escape("$treeDash$treeDash") + '\s+(.*)'
 
   $statusIndex = $readmeLines.FindIndex({ $_ -match "^\- \*\*Status:\*\*" })
-  if ($statusIndex -ge 0 -and -not [string]::IsNullOrWhiteSpace($Chapter) -and -not [string]::IsNullOrWhiteSpace($ChapterTitle)) {
-    $readmeLines[$statusIndex] = "- **Status:** ✅ Completed through **Chapter $Chapter ($ChapterTitle)**"
+  if ($statusIndex -ge 0 -and $statusChapter) {
+    if (-not [string]::IsNullOrWhiteSpace($statusChapterTitle)) {
+      $readmeLines[$statusIndex] = "- **Status:** ✅ Completed through **Chapter $statusChapter ($statusChapterTitle)**"
+    } else {
+      $readmeLines[$statusIndex] = "- **Status:** ✅ Completed through **Chapter $statusChapter**"
+    }
   }
 
   $activeIndex = $readmeLines.FindIndex({ $_ -match "^\- \*\*Active Days Synced:\*\*" })
-  if ($activeIndex -ge 0) {
-    $activeLine = $readmeLines[$activeIndex]
-    $startMonth = $EntryDate.ToString("MMMM")
-    $startDay = $EntryDate.Day
-    $yearValue = $EntryDate.Year
-
-    if ($activeLine -match "\*\*Active Days Synced:\*\*\s+([A-Za-z]+)\s+(\d{1,2})\s*-\s*([A-Za-z]+)\s+(\d{1,2})\s+\((\d{4})\)") {
-      $startMonth = $matches[1]
-      $startDay = [int]$matches[2]
-      $yearValue = [int]$matches[5]
-    } elseif ($activeLine -match "\*\*Active Days Synced:\*\*\s+([A-Za-z]+)\s+(\d{1,2})") {
-      $startMonth = $matches[1]
-      $startDay = [int]$matches[2]
-      if ($activeLine -match "\((\d{4})\)") {
-        $yearValue = [int]$matches[1]
-      }
-    }
-
-    $endMonth = $EntryDate.ToString("MMMM")
-    $endDay = $EntryDate.Day
-    $readmeLines[$activeIndex] = "- **Active Days Synced:** $startMonth $startDay - $endMonth $endDay ($yearValue)"
+  if ($activeIndex -ge 0 -and -not [string]::IsNullOrWhiteSpace($pythonActiveDaysText)) {
+    $readmeLines[$activeIndex] = "- **Active Days Synced:** $pythonActiveDaysText"
   }
 
   $repoHeaderIndex = $readmeLines.FindIndex({ $_ -eq "## Repository Structure" })
@@ -556,7 +707,12 @@ if (Test-Path $readmePath) {
     }
   }
 
-  if (-not [string]::IsNullOrWhiteSpace($ChapterTitle)) {
+  $trackHeaderIndex = $readmeLines.FindIndex({ $_ -match '^## Chapter Track' })
+  if ($trackHeaderIndex -ge 0 -and $statusChapter) {
+    $readmeLines[$trackHeaderIndex] = "## Chapter Track (1-$statusChapter)"
+  }
+
+  if (-not [string]::IsNullOrWhiteSpace($statusChapterTitle)) {
     $trackHeaderIndex = $readmeLines.FindIndex({ $_ -match "^## Chapter Track" })
     if ($trackHeaderIndex -ge 0) {
       $trackLineIndices = @()
@@ -568,10 +724,10 @@ if (Test-Path $readmePath) {
         }
       }
 
-      $alreadyTracked = $readmeLines | Where-Object { $_ -match "\*\*$([Regex]::Escape($ChapterTitle))\*\*" }
+      $alreadyTracked = $readmeLines | Where-Object { $_ -match "\*\*$([Regex]::Escape($statusChapterTitle))\*\*" }
       if (-not $alreadyTracked) {
-        $nextNumber = if (-not [string]::IsNullOrWhiteSpace($Chapter) -and $Chapter -match "^\d+$") {
-          [int]$Chapter
+        $nextNumber = if ($statusChapter) {
+          [int]$statusChapter
         } elseif ($trackLineIndices.Count -gt 0 -and $readmeLines[$trackLineIndices[-1]] -match "^(\d+)\.") {
           [int]$matches[1] + 1
         } else {
@@ -586,7 +742,7 @@ if (Test-Path $readmePath) {
           "topic coverage"
         }
 
-        $newTrackLine = "$nextNumber. **$ChapterTitle** - $chapterDetail"
+        $newTrackLine = "$nextNumber. **$statusChapterTitle** - $chapterDetail"
         if ($trackLineIndices.Count -gt 0) {
           $readmeLines.Insert($trackLineIndices[-1] + 1, $newTrackLine)
         } else {
