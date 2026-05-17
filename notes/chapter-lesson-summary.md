@@ -72,3 +72,9 @@ This file captures concise, portfolio-friendly lesson concepts from Boot.dev Cha
 - Quest Status
 - Merge Dictionaries
 
+## CH11: Sets
+- Sets
+- Sets Quiz
+- Vowels
+- Set Subtraction
+

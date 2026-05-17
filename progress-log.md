@@ -6,8 +6,8 @@ Daily progress tracking for Boot.dev "Learn to Code in Python" (synced to exact 
 
 ### May 17, 2026
 - **Streak Activity:** 1 Boot.dev/GitHub activity
-- **Chapter Focus:** General learning update
-- **Lesson Concepts Covered:** progress updates
+- **Chapter Focus:** Chapter 11 - Sets
+- **Lesson Concepts Covered:** Sets, Sets Quiz, Vowels, Set Subtraction
 - **Security Connection:** A09: Security Logging and Monitoring Failures
 
 ### May 16, 2026
@@ -82,11 +82,11 @@ Daily progress tracking for Boot.dev "Learn to Code in Python" (synced to exact 
 - **Lesson Concepts Covered:** Python purpose, code/console fundamentals, syntax error awareness, instruction sequencing
 - **Security Connection:** OWASP A04 - solid foundations for secure-by-design coding habits
 
-## Course Summary (Through Chapter 10 - Dictionaries)
+## Course Summary (Through Chapter 11 - Sets)
 
 ### Completed Scope
 - **Course:** Learn to Code in Python
-- **Chapters Completed:** 10/10 (Introduction → Dictionaries)
+- **Chapters Completed:** 11/11 (Introduction → Sets)
 - **Active Days Logged:** 13 days
 
 ### Chapter Breakdown
@@ -103,6 +103,7 @@ Daily progress tracking for Boot.dev "Learn to Code in Python" (synced to exact 
 | 8 | Loops | May 12-13 | OWASP A09 (monitoring and iteration reliability) |
 | 9 | Lists | May 14-15 | OWASP A09 (event set processing and triage) |
 | 10 | Dictionaries | May 16 | OWASP A09: Security Logging and Monitoring Failures |
+| 11 | Sets | May 17 | OWASP A09: Security Logging and Monitoring Failures |
 
 ### Portfolio Direction
 
