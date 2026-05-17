@@ -87,8 +87,6 @@ def suspicious(events: list[str]) -> list[str]:
 **Security use:** practical chapter application aligned to A09: Security Logging and Monitoring Failures.
 
 ## OWASP Crosswalk (Quick)
-- CH10 → A09
-
 - CH1 → A04
 - CH2 → A05
 - CH3 → A03
@@ -98,6 +96,7 @@ def suspicious(events: list[str]) -> list[str]:
 - CH7 → A01/A09
 - CH8 → A09
 - CH9 → A09
+- CH10 → A09
 
 ## Immediate Portfolio Steps
 
