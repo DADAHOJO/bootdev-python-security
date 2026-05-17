@@ -1,4 +1,4 @@
-# Chapter Lesson Summary (Concept-Normalized)
+﻿# Chapter Lesson Summary (Concept-Normalized)
 
 This file captures concise, portfolio-friendly lesson concepts from Boot.dev Chapters 1–9.
 
@@ -58,3 +58,17 @@ This file captures concise, portfolio-friendly lesson concepts from Boot.dev Cha
 - Search, find max, modulo usage
 - Slicing and list operations
 - Deletion, tuples, reverse/filter patterns
+
+## CH10: Dictionaries
+- Dictionaries
+- Duplicate Keys
+- Accessing Dictionary Values
+- Setting Dictionary Values
+- Updating Dictionary Values
+- Deleting Dictionary Values
+- Counting Practice
+- Iterating Over a Dictionary in Python
+- Ordered or Unordered?
+- Quest Status
+- Merge Dictionaries
+

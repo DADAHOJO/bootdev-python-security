@@ -36,7 +36,8 @@ bootdev-python-security/
 │   ├── 06-computing/
 │   ├── 07-comparisons/
 │   ├── 08-loops/
-│   └── 09-lists/
+│   ├── 09-lists/
+│   └── 10-dictionaries/
 ├── exercises/
 ├── scripts/
 └── notes/

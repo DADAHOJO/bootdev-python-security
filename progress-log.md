@@ -13,7 +13,7 @@ Daily progress tracking for Boot.dev "Learn to Code in Python" (synced to exact 
 ### May 16, 2026
 - **Streak Activity:** 1 Boot.dev/GitHub activity
 - **Chapter Focus:** Chapter 10 - Dictionaries
-- **Lesson Concepts Covered:** Dictionaries, Duplicate Keys
+- **Lesson Concepts Covered:** Dictionaries, Duplicate Keys, Accessing Dictionary Values, Setting Dictionary Values, Updating Dictionary Values, Deleting Dictionary Values, Counting Practice, Iterating Over a Dictionary in Python, Ordered or Unordered?, Quest Status, Merge Dictionaries
 - **Security Connection:** A09: Security Logging and Monitoring Failures
 
 ### May 15, 2026
