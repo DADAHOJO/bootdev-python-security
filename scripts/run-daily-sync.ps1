@@ -722,11 +722,42 @@ function Get-CourseRepoInventory {
   return $inventory
 }
 
+function Get-SectionRepoHint {
+  param([string[]]$SectionLines)
+
+  if (-not $SectionLines -or $SectionLines.Count -eq 0) {
+    return $null
+  }
+
+  foreach ($line in $SectionLines) {
+    $trimmed = $line.Trim()
+
+    if ($trimmed -match '^<!--\s*Sync\s+Hint:\s*\[repo:\s*([^\]]+)\s*\]\s*-->$') {
+      return $matches[1].Trim()
+    }
+
+    if ($trimmed -match '^<!--\s*repo:\s*([^\-].*?)\s*-->$') {
+      return $matches[1].Trim()
+    }
+
+    if ($trimmed -match '^>\s*Sync\s+Hint:\s*\[repo:\s*([^\]]+)\s*\]\s*$') {
+      return $matches[1].Trim()
+    }
+
+    if ($trimmed -match '^\[repo:\s*([^\]]+)\s*\]$') {
+      return $matches[1].Trim()
+    }
+  }
+
+  return $null
+}
+
 function Resolve-CourseRepoPath {
   param(
     [string]$CourseHeading,
     [string]$ProjectsRoot,
-    [object[]]$RepoInventory
+    [object[]]$RepoInventory,
+    [string[]]$SectionLines = @()
   )
 
   if ([string]::IsNullOrWhiteSpace($CourseHeading)) {
@@ -742,6 +773,10 @@ function Resolve-CourseRepoPath {
   } elseif ($courseTitle -match '^(.*?)\s+\(repo:\s*([^\)]+)\)\s*$') {
     $courseTitle = $matches[1].Trim()
     $repoHint = $matches[2].Trim()
+  }
+
+  if ([string]::IsNullOrWhiteSpace($repoHint)) {
+    $repoHint = Get-SectionRepoHint -SectionLines $SectionLines
   }
 
   if (-not [string]::IsNullOrWhiteSpace($repoHint)) {
@@ -1940,7 +1975,7 @@ if (Test-Path $journeyRoadmapPath) {
         [void]$sectionLines.Add($journeyRoadmapLines[$j])
       }
 
-      $courseRepoPath = Resolve-CourseRepoPath -CourseHeading $courseHeading -ProjectsRoot $projectsRoot -RepoInventory $courseRepoInventory
+      $courseRepoPath = Resolve-CourseRepoPath -CourseHeading $courseHeading -ProjectsRoot $projectsRoot -RepoInventory $courseRepoInventory -SectionLines $sectionLines
       $mappingSnapshot = $null
       if (-not [string]::IsNullOrWhiteSpace($courseRepoPath)) {
         if (-not $mappingSnapshotCache.ContainsKey($courseRepoPath)) {
