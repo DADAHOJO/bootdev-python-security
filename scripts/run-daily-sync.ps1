@@ -321,14 +321,23 @@ if ([string]::IsNullOrWhiteSpace($SecurityConnection)) {
 
 $activityWord = if ($StreakActivity -eq 1) { "activity" } else { "activities" }
 $entryDateText = $EntryDate.ToString("MMMM d, yyyy")
-$entryLines = @(
+$entryMonthHeader = "## $($EntryDate.ToString("MMMM yyyy"))"
+$entryHeaderLine = "### $entryDateText"
+$entryDetailLines = @(
+  "- **Streak Activity:** $StreakActivity Boot.dev/GitHub $activityWord",
+  "- **Chapter Focus:** $ChapterFocus",
+  "- **Lesson Concepts Covered:** $LessonConceptsCovered",
+  "- **Security Connection:** $SecurityConnection"
+)
+$entryMarkdownLines = @($entryHeaderLine) + $entryDetailLines + @("")
+$entryMarkdownBlock = ($entryMarkdownLines -join [Environment]::NewLine)
+$legacyEntryLines = @(
   $entryDateText,
   "Streak Activity: $StreakActivity Boot.dev/GitHub $activityWord",
   "Chapter Focus: $ChapterFocus",
   "Lesson Concepts Covered: $LessonConceptsCovered",
   "Security Connection: $SecurityConnection"
 )
-$entryBlock = ($entryLines -join [Environment]::NewLine)
 
 $progressLogs = @(
   (Join-Path $projectsRoot "bootdev-python-security\progress-log.md"),
@@ -341,19 +350,86 @@ foreach ($progressLog in $progressLogs) {
     continue
   }
 
-  $existingContent = Get-Content -Path $progressLog -Raw
-  if ($existingContent -like "*$entryBlock*") {
+  $logLines = [System.Collections.Generic.List[string]](Get-Content -Path $progressLog)
+  $existingContent = ($logLines -join [Environment]::NewLine)
+  if ($existingContent -like "*$entryMarkdownBlock*") {
     Write-Host "Progress entry already exists in: $progressLog"
     continue
   }
 
-  if (-not [string]::IsNullOrWhiteSpace($existingContent) -and -not $existingContent.EndsWith([Environment]::NewLine)) {
-    Add-Content -Path $progressLog -Value ""
+  $legacyIndex = -1
+  for ($i = 0; $i -le ($logLines.Count - $legacyEntryLines.Count); $i++) {
+    $isLegacyMatch = $true
+    for ($j = 0; $j -lt $legacyEntryLines.Count; $j++) {
+      if ($logLines[$i + $j].Trim() -ne $legacyEntryLines[$j]) {
+        $isLegacyMatch = $false
+        break
+      }
+    }
+
+    if ($isLegacyMatch) {
+      $legacyIndex = $i
+      break
+    }
   }
 
-  Add-Content -Path $progressLog -Value ""
-  Add-Content -Path $progressLog -Value $entryBlock
-  Write-Host "Appended progress entry to: $progressLog"
+  if ($legacyIndex -ge 0) {
+    $logLines.RemoveRange($legacyIndex, $legacyEntryLines.Count)
+    if ($legacyIndex -lt $logLines.Count -and [string]::IsNullOrWhiteSpace($logLines[$legacyIndex])) {
+      $logLines.RemoveAt($legacyIndex)
+    }
+  }
+
+  $monthIndex = $logLines.FindIndex({ $_.Trim() -eq $entryMonthHeader })
+  if ($monthIndex -lt 0) {
+    if ($logLines.Count -gt 0 -and -not [string]::IsNullOrWhiteSpace($logLines[$logLines.Count - 1])) {
+      $logLines.Add("")
+    }
+    $logLines.Add($entryMonthHeader)
+    $logLines.Add("")
+    $monthIndex = $logLines.Count - 2
+  }
+
+  $monthBodyStart = $monthIndex + 1
+  if ($monthBodyStart -lt $logLines.Count -and [string]::IsNullOrWhiteSpace($logLines[$monthBodyStart])) {
+    $monthBodyStart++
+  }
+
+  $monthEnd = $logLines.Count
+  for ($i = $monthIndex + 1; $i -lt $logLines.Count; $i++) {
+    if ($logLines[$i].Trim() -match '^##\s+') {
+      $monthEnd = $i
+      break
+    }
+  }
+
+  $existingEntryIndex = -1
+  for ($i = $monthBodyStart; $i -lt $monthEnd; $i++) {
+    if ($logLines[$i].Trim() -eq $entryHeaderLine) {
+      $existingEntryIndex = $i
+      break
+    }
+  }
+
+  if ($existingEntryIndex -ge 0) {
+    $removeEnd = $existingEntryIndex + 1
+    while ($removeEnd -lt $monthEnd -and $logLines[$removeEnd].Trim() -notmatch '^###\s+' -and $logLines[$removeEnd].Trim() -notmatch '^##\s+') {
+      $removeEnd++
+    }
+    $logLines.RemoveRange($existingEntryIndex, $removeEnd - $existingEntryIndex)
+    $insertIndex = $existingEntryIndex
+  } else {
+    $insertIndex = $monthBodyStart
+  }
+
+  $entryInsertLines = [System.Collections.Generic.List[string]]::new()
+  foreach ($line in $entryMarkdownLines) {
+    $entryInsertLines.Add($line)
+  }
+
+  $logLines.InsertRange($insertIndex, $entryInsertLines)
+  Set-Content -Path $progressLog -Value $logLines
+  Write-Host "Upserted progress entry in: $progressLog"
 }
 
 $pythonRepo = Join-Path $projectsRoot "bootdev-python-security"
