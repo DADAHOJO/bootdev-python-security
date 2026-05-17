@@ -1409,7 +1409,7 @@ $journeyRoadmapPath = Join-Path $projectsRoot "bootdev-security-journey\roadmap.
 if (Test-Path $journeyRoadmapPath) {
   $journeyRoadmapLines = [System.Collections.Generic.List[string]](Get-Content -Path $journeyRoadmapPath -Encoding UTF8)
   for ($i = 0; $i -lt $journeyRoadmapLines.Count; $i++) {
-    if ($journeyRoadmapLines[$i] -match '^(\*\*Status:\*\*\s+🔄\s+In Progress\s*\([A-Za-z]+\s+\d{1,2},\s+\d{4}\s*-\s*)(\?|[A-Za-z]+\s+\d{1,2},\s+\d{4})(\).*)$') {
+    if ($journeyRoadmapLines[$i] -match '^(\*\*Status:\*\*.*In Progress\s*\([A-Za-z]+\s+\d{1,2},\s+\d{4}\s*-\s*)(\?|[A-Za-z]+\s+\d{1,2},\s+\d{4})(\).*)$') {
       $journeyRoadmapLines[$i] = "$($matches[1])$entryDateText$($matches[3])"
     }
   }
