@@ -1,4 +1,4 @@
-# Python Progress Log
+﻿# Python Progress Log
 
 Daily progress tracking for Boot.dev "Learn to Code in Python" (synced to exact active days).
 
@@ -86,7 +86,7 @@ Daily progress tracking for Boot.dev "Learn to Code in Python" (synced to exact 
 
 ### Completed Scope
 - **Course:** Learn to Code in Python
-- **Chapters Completed:** 10/10 (Introduction → Dictionaries)
+- **Chapters Completed:** 10/10 (Introduction â†’ Dictionaries)
 - **Active Days Logged:** 13 days
 
 ### Chapter Breakdown
