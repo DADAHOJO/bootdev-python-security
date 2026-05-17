@@ -528,15 +528,24 @@ function Get-ProgressSnapshot {
       continue
     }
 
+    $focusText = $null
+    if ($trimmed -match '^\-\s+\*\*Chapter Focus:\*\*\s*(.+)$' -or $trimmed -match '^\-\s+\*\*Progress Sync:\*\*\s*(.+)$' -or $trimmed -match '^Chapter Focus:\s*(.+)$' -or $trimmed -match '^Progress Sync:\s*(.+)$') {
+      $focusText = $matches[1].Trim()
+    }
+
+    if ([string]::IsNullOrWhiteSpace($focusText)) {
+      continue
+    }
+
     $chapterNumber = $null
     $chapterTitle = ""
-    if ($trimmed -match 'Chapter\s+(\d+)\s*-\s*([^\|]+)$') {
+    if ($focusText -match 'Chapter\s+(\d+)\s*\-\s*([^\|]+)$') {
       $chapterNumber = [int]$matches[1]
       $chapterTitle = $matches[2].Trim()
-    } elseif ($trimmed -match 'Chapter\s+(\d+)\s*\(([^\)]+)\)') {
+    } elseif ($focusText -match 'Chapter\s+(\d+)\s*\(([^\)]+)\)') {
       $chapterNumber = [int]$matches[1]
       $chapterTitle = $matches[2].Trim()
-    } elseif ($trimmed -match 'Chapter\s+(\d+)') {
+    } elseif ($focusText -match 'Chapter\s+(\d+)') {
       $chapterNumber = [int]$matches[1]
     }
 
@@ -813,6 +822,22 @@ function Get-SecurityFrameworkLabel {
   return ""
 }
 
+function Get-AutoFrameworksForChapter {
+  param(
+    [string]$ChapterTitle,
+    [string]$ConnectionText
+  )
+
+  $normalized = "$ChapterTitle $ConnectionText".ToLowerInvariant()
+  $asvsTriggered = $normalized -match '(backend|api|http|endpoint|authentication|authorization|auth\b|server|sql|database)'
+  $ssdfTriggered = $normalized -match '(ci/cd|cicd|pipeline|devsecops|github actions|deployment|release|supply chain|container|docker|kubernetes)'
+
+  return [pscustomobject]@{
+    Asvs = $asvsTriggered
+    Ssdf = $ssdfTriggered
+  }
+}
+
 function Get-CourseSecurityMappingSnapshot {
   param([string]$MappingPath)
 
@@ -835,13 +860,9 @@ function Get-CourseSecurityMappingSnapshot {
   foreach ($line in $mappingLines) {
     $trimmed = $line.Trim()
 
-    foreach ($frameworkName in @("OWASP ASVS", "NIST SSDF", "OWASP Top 10")) {
-      $detected = Get-SecurityFrameworkLabel -Text "$trimmed $frameworkName"
-      if (-not [string]::IsNullOrWhiteSpace($detected) -and $trimmed -match [regex]::Escape($frameworkName.Split(' ')[0])) {
-        if ($frameworksDetected -notcontains $detected) {
-          $frameworksDetected += $detected
-        }
-      }
+    $detectedFramework = Get-SecurityFrameworkLabel -Text $trimmed
+    if (-not [string]::IsNullOrWhiteSpace($detectedFramework) -and $frameworksDetected -notcontains $detectedFramework) {
+      $frameworksDetected += $detectedFramework
     }
 
     if ($trimmed -match '^###\s+(?:Chapter|Lesson|Module|Unit|Topic)\s*(\d+)\s*[:\-]\s*(.+)$' -or $trimmed -match '^###\s*(?:CH|Ch)\s*(\d+)\s*[:\-]\s*(.+)$' -or $trimmed -match '^###\s*(\d+)\s*[\.:\-]\s*(.+)$') {
@@ -940,6 +961,21 @@ function Get-CourseSecurityMappingSnapshot {
   $rightArrowLocal = [char]0x2192
   $frameworkPriority = @("OWASP Top 10", "OWASP ASVS", "NIST SSDF")
   foreach ($chapter in $chapters) {
+    $chapterContextText = "$($chapter.Connection) $(@($chapter.ConnectionNotes) -join ' ')"
+    $autoFrameworks = Get-AutoFrameworksForChapter -ChapterTitle $chapter.Title -ConnectionText $chapterContextText
+    if ($autoFrameworks.Asvs -and -not $chapter.FrameworkDetails.ContainsKey("OWASP ASVS")) {
+      $chapter.FrameworkDetails["OWASP ASVS"] = "checklist mapping in progress"
+      if ($frameworksDetected -notcontains "OWASP ASVS") {
+        $frameworksDetected += "OWASP ASVS"
+      }
+    }
+    if ($autoFrameworks.Ssdf -and -not $chapter.FrameworkDetails.ContainsKey("NIST SSDF")) {
+      $chapter.FrameworkDetails["NIST SSDF"] = "workflow mapping in progress"
+      if ($frameworksDetected -notcontains "NIST SSDF") {
+        $frameworksDetected += "NIST SSDF"
+      }
+    }
+
     $connectionText = ""
 
     if ($chapter.FrameworkDetails -and $chapter.FrameworkDetails.Count -gt 0) {
@@ -1053,6 +1089,42 @@ function Set-CourseSectionBlock {
   }
 }
 
+function Remove-SectionBlock {
+  param(
+    [System.Collections.Generic.List[string]]$SectionLines,
+    [string[]]$HeaderCandidates
+  )
+
+  if (-not $SectionLines -or -not $HeaderCandidates -or $HeaderCandidates.Count -eq 0) {
+    return
+  }
+
+  $headerIndex = -1
+  for ($i = 0; $i -lt $SectionLines.Count; $i++) {
+    if ($HeaderCandidates -contains $SectionLines[$i].Trim()) {
+      $headerIndex = $i
+      break
+    }
+  }
+
+  if ($headerIndex -lt 0) {
+    return
+  }
+
+  $blockEnd = $SectionLines.Count
+  for ($i = $headerIndex + 1; $i -lt $SectionLines.Count; $i++) {
+    $trimmed = $SectionLines[$i].Trim()
+    if ($trimmed -match '^\*\*.+\*\*:?$' -or $trimmed -match '^###\s+' -or $trimmed -match '^##\s+') {
+      $blockEnd = $i
+      break
+    }
+  }
+
+  if ($blockEnd -gt $headerIndex) {
+    $SectionLines.RemoveRange($headerIndex, $blockEnd - $headerIndex)
+  }
+}
+
 function Update-RoadmapCourseSection {
   param(
     [System.Collections.Generic.List[string]]$SectionLines,
@@ -1064,10 +1136,21 @@ function Update-RoadmapCourseSection {
     return [System.Collections.Generic.List[string]]::new()
   }
 
+  $hasStatusLine = $false
   for ($i = 0; $i -lt $SectionLines.Count; $i++) {
-    if ($SectionLines[$i] -match '^(\*\*Status:\*\*.*In Progress\s*\([A-Za-z]+\s+\d{1,2},\s+\d{4}\s*-\s*)(\?|[A-Za-z]+\s+\d{1,2},\s+\d{4})(\).*)$') {
+    if ($SectionLines[$i] -match '^\*\*Status:\*\*') {
+      $hasStatusLine = $true
+    }
+
+    if ($SectionLines[$i] -match '^(\*\*Status:\*\*.*In Progress\s*\([A-Za-z]+\s+\d{1,2},\s+\d{4}\s*\-\s*)(\?|[A-Za-z]+\s+\d{1,2},\s+\d{4})(\).*)$') {
       $SectionLines[$i] = "$($matches[1])$EntryDateText$($matches[3])"
     }
+  }
+
+  if (-not $hasStatusLine) {
+    Remove-SectionBlock -SectionLines $SectionLines -HeaderCandidates @("**Chapters:**")
+    Remove-SectionBlock -SectionLines $SectionLines -HeaderCandidates @("**Security Connections:**", "**Planned Security Connections:**")
+    return $SectionLines
   }
 
   if ($MappingSnapshot -and -not [string]::IsNullOrWhiteSpace($MappingSnapshot.MappingSummary)) {
