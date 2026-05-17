@@ -276,7 +276,8 @@ if ([string]::IsNullOrWhiteSpace($ChapterFolder) -and -not [string]::IsNullOrWhi
   $slug = $ChapterTitle.ToLowerInvariant() -replace '[^a-z0-9]+', '-'
   $slug = $slug.Trim('-')
   if (-not [string]::IsNullOrWhiteSpace($slug)) {
-    $ChapterFolder = "$Chapter-$slug"
+    $chapterFolderPrefix = if ($Chapter -match '^\d+$') { "{0:D2}" -f [int]$Chapter } else { $Chapter }
+    $ChapterFolder = "$chapterFolderPrefix-$slug"
   }
 }
 
@@ -319,8 +320,117 @@ if ([string]::IsNullOrWhiteSpace($SecurityConnection)) {
   $SecurityConnection = $Security
 }
 
-$activityWord = if ($StreakActivity -eq 1) { "activity" } else { "activities" }
+$chapterRootPath = Join-Path $projectsRoot "bootdev-python-security\chapters"
+$chapterSummaryNotesPath = Join-Path $projectsRoot "bootdev-python-security\notes\chapter-lesson-summary.md"
 $entryDateText = $EntryDate.ToString("MMMM d, yyyy")
+
+$lessonItems = @()
+if (-not [string]::IsNullOrWhiteSpace($LessonConceptsCovered)) {
+  $lessonItems = @(
+    $LessonConceptsCovered -split ',' |
+      ForEach-Object { $_.Trim() } |
+      Where-Object { -not [string]::IsNullOrWhiteSpace($_) } |
+      Select-Object -Unique
+  )
+}
+
+if ($lessonItems.Count -eq 0 -and -not [string]::IsNullOrWhiteSpace($Concept)) {
+  $lessonItems = @(
+    $Concept -split ',' |
+      ForEach-Object { $_.Trim() } |
+      Where-Object { -not [string]::IsNullOrWhiteSpace($_) } |
+      Select-Object -Unique
+  )
+}
+
+if ($lessonItems.Count -eq 0) {
+  $lessonItems = @("progress updates")
+}
+
+if (-not [string]::IsNullOrWhiteSpace($ChapterFolder)) {
+  $chapterDirPath = Join-Path $chapterRootPath $ChapterFolder
+  if (-not (Test-Path $chapterDirPath)) {
+    New-Item -ItemType Directory -Path $chapterDirPath -Force | Out-Null
+  }
+
+  $chapterReadmePath = Join-Path $chapterDirPath "README.md"
+  $chapterGoalText = if (-not [string]::IsNullOrWhiteSpace($ChapterSummary)) {
+    $ChapterSummary
+  } else {
+    "Consolidate this chapter's Python concepts and apply them to secure coding practices."
+  }
+
+  $chapterLines = [System.Collections.Generic.List[string]]::new()
+  [void]$chapterLines.Add("# Chapter ${Chapter}: $ChapterTitle")
+  [void]$chapterLines.Add("")
+  [void]$chapterLines.Add("Boot.dev `"Learn to Code in Python`" - Chapter $Chapter")
+  [void]$chapterLines.Add("")
+  [void]$chapterLines.Add("## Chapter Goal")
+  [void]$chapterLines.Add($chapterGoalText)
+  [void]$chapterLines.Add("")
+  [void]$chapterLines.Add("## Lesson Concepts Covered")
+  foreach ($lesson in $lessonItems) {
+    [void]$chapterLines.Add("- $lesson")
+  }
+  [void]$chapterLines.Add("")
+  [void]$chapterLines.Add("## Security Mapping")
+  [void]$chapterLines.Add("- **$SecurityConnection**")
+  [void]$chapterLines.Add("- Learning outcomes aligned with secure coding and monitoring practices.")
+  [void]$chapterLines.Add("")
+  [void]$chapterLines.Add("## Portfolio Application")
+  [void]$chapterLines.Add("- Translate these concepts into secure coding exercises and repo examples.")
+  [void]$chapterLines.Add("- Keep chapter artifacts synced with progress logs and README updates.")
+  [void]$chapterLines.Add("")
+  [void]$chapterLines.Add("## Completion Notes")
+  [void]$chapterLines.Add("- Latest activity: $entryDateText")
+  [void]$chapterLines.Add("- Streak activity recorded: $StreakActivity")
+  [void]$chapterLines.Add("")
+
+  Set-Content -Path $chapterReadmePath -Value $chapterLines -Encoding UTF8
+  Write-Host "Updated chapter artifact: $chapterReadmePath"
+}
+
+if ((Test-Path $chapterSummaryNotesPath) -and -not [string]::IsNullOrWhiteSpace($Chapter) -and -not [string]::IsNullOrWhiteSpace($ChapterTitle)) {
+  $summaryLines = [System.Collections.Generic.List[string]](Get-Content -Path $chapterSummaryNotesPath -Encoding UTF8)
+  $summaryHeader = "## CH${Chapter}: $ChapterTitle"
+
+  $sectionStart = -1
+  for ($i = 0; $i -lt $summaryLines.Count; $i++) {
+    if ($summaryLines[$i].Trim() -eq $summaryHeader) {
+      $sectionStart = $i
+      break
+    }
+  }
+
+  if ($sectionStart -ge 0) {
+    $sectionEnd = $summaryLines.Count
+    for ($i = $sectionStart + 1; $i -lt $summaryLines.Count; $i++) {
+      if ($summaryLines[$i] -match '^##\s+CH') {
+        $sectionEnd = $i
+        break
+      }
+    }
+    $summaryLines.RemoveRange($sectionStart, $sectionEnd - $sectionStart)
+  } else {
+    if ($summaryLines.Count -gt 0 -and -not [string]::IsNullOrWhiteSpace($summaryLines[$summaryLines.Count - 1])) {
+      [void]$summaryLines.Add("")
+    }
+    $sectionStart = $summaryLines.Count
+  }
+
+  $sectionLines = [System.Collections.Generic.List[string]]::new()
+  [void]$sectionLines.Add($summaryHeader)
+  foreach ($lesson in $lessonItems) {
+    [void]$sectionLines.Add("- $lesson")
+  }
+  [void]$sectionLines.Add("")
+
+  $summaryLines.InsertRange($sectionStart, $sectionLines)
+  Set-Content -Path $chapterSummaryNotesPath -Value $summaryLines -Encoding UTF8
+  Write-Host "Updated chapter summary notes: $chapterSummaryNotesPath"
+}
+
+$activityWord = if ($StreakActivity -eq 1) { "activity" } else { "activities" }
 $entryMonthHeader = "## $($EntryDate.ToString("MMMM yyyy"))"
 $entryHeaderLine = "### $entryDateText"
 
