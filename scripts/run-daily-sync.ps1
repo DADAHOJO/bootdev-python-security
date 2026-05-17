@@ -792,12 +792,34 @@ function Resolve-CourseRepoPath {
   return $orderedMatches[0].Path
 }
 
+function Get-SecurityFrameworkLabel {
+  param([string]$Text)
+
+  if ([string]::IsNullOrWhiteSpace($Text)) {
+    return ""
+  }
+
+  $normalized = $Text.ToLowerInvariant()
+  if ($normalized -match 'owasp\s+asvs') {
+    return "OWASP ASVS"
+  }
+  if ($normalized -match 'nist\s+ssdf') {
+    return "NIST SSDF"
+  }
+  if ($normalized -match 'owasp') {
+    return "OWASP Top 10"
+  }
+
+  return ""
+}
+
 function Get-CourseSecurityMappingSnapshot {
   param([string]$MappingPath)
 
   $snapshot = [ordered]@{
     Chapters = @()
     SecurityConnections = @()
+    MappingSummary = ""
   }
 
   if (-not (Test-Path $MappingPath)) {
@@ -806,13 +828,23 @@ function Get-CourseSecurityMappingSnapshot {
 
   $mappingLines = Get-Content -Path $MappingPath -Encoding UTF8
   $chapters = @()
+  $frameworksDetected = @()
   $currentChapter = $null
-  $inOwaspConnection = $false
+  $activeFramework = ""
 
   foreach ($line in $mappingLines) {
     $trimmed = $line.Trim()
 
-    if ($trimmed -match '^###\s+Chapter\s+(\d+)\s*:\s*(.+)$') {
+    foreach ($frameworkName in @("OWASP ASVS", "NIST SSDF", "OWASP Top 10")) {
+      $detected = Get-SecurityFrameworkLabel -Text "$trimmed $frameworkName"
+      if (-not [string]::IsNullOrWhiteSpace($detected) -and $trimmed -match [regex]::Escape($frameworkName.Split(' ')[0])) {
+        if ($frameworksDetected -notcontains $detected) {
+          $frameworksDetected += $detected
+        }
+      }
+    }
+
+    if ($trimmed -match '^###\s+(?:Chapter|Lesson|Module|Unit|Topic)\s*(\d+)\s*[:\-]\s*(.+)$' -or $trimmed -match '^###\s*(?:CH|Ch)\s*(\d+)\s*[:\-]\s*(.+)$' -or $trimmed -match '^###\s*(\d+)\s*[\.:\-]\s*(.+)$') {
       if ($currentChapter) {
         $chapters += [pscustomobject]$currentChapter
       }
@@ -821,8 +853,10 @@ function Get-CourseSecurityMappingSnapshot {
         Title = $matches[2].Trim()
         Owasp = ""
         Connection = ""
+        FrameworkDetails = @{}
+        ConnectionNotes = @()
       }
-      $inOwaspConnection = $false
+      $activeFramework = ""
       continue
     }
 
@@ -830,25 +864,68 @@ function Get-CourseSecurityMappingSnapshot {
       continue
     }
 
-    if ($trimmed -eq '**OWASP Connection**') {
-      $inOwaspConnection = $true
+    if ($trimmed -match '^\*\*(.+?)\*\*$') {
+      $activeFramework = Get-SecurityFrameworkLabel -Text $matches[1].Trim()
+      if (-not [string]::IsNullOrWhiteSpace($activeFramework) -and $frameworksDetected -notcontains $activeFramework) {
+        $frameworksDetected += $activeFramework
+      }
       continue
     }
 
-    if ($trimmed -match '^\*\*' -and $trimmed -ne '**OWASP Connection**') {
-      $inOwaspConnection = $false
+    if ($trimmed -match '^\-\s*\*\*(.+)\*\*$') {
+      $emphasisValue = $matches[1].Trim().TrimEnd('.')
+      if ($activeFramework -eq "OWASP Top 10" -and [string]::IsNullOrWhiteSpace($currentChapter.Owasp)) {
+        $currentChapter.Owasp = $emphasisValue
+      }
+      if (-not [string]::IsNullOrWhiteSpace($activeFramework) -and -not $currentChapter.FrameworkDetails.ContainsKey($activeFramework)) {
+        $currentChapter.FrameworkDetails[$activeFramework] = $emphasisValue
+      }
+      continue
     }
 
-    if ($inOwaspConnection) {
-      if ([string]::IsNullOrWhiteSpace($currentChapter.Owasp) -and $trimmed -match '^- \*\*(.+)\*\*$') {
-        $currentChapter.Owasp = $matches[1].Trim()
-        continue
+    if ($trimmed -match '^\-\s*(?:\*\*)?(OWASP(?:\s+Top\s*10|\s+ASVS)?|NIST\s+SSDF)(?:\*\*)?\s*[:\-]\s*(.+)$') {
+      $framework = Get-SecurityFrameworkLabel -Text $matches[1]
+      $detail = $matches[2].Trim().TrimEnd('.')
+      if (-not [string]::IsNullOrWhiteSpace($framework)) {
+        if ($frameworksDetected -notcontains $framework) {
+          $frameworksDetected += $framework
+        }
+        $currentChapter.FrameworkDetails[$framework] = $detail
       }
+      continue
+    }
 
-      if ($trimmed -match '^- Connection:\s*(.+)$') {
-        $currentChapter.Connection = $matches[1].Trim()
-        continue
+    if ($trimmed -match '^\-\s*(?:Connection|Security\s+connection|Security\s+use|Security\s+focus):\s*(.+)$') {
+      $connectionValue = $matches[1].Trim().TrimEnd('.')
+      if (-not [string]::IsNullOrWhiteSpace($activeFramework)) {
+        if ($activeFramework -eq "OWASP Top 10" -and -not [string]::IsNullOrWhiteSpace($currentChapter.Owasp) -and $connectionValue -notmatch '(?i)owasp|A\d{2}') {
+          $connectionValue = "$connectionValue ($($currentChapter.Owasp))"
+        }
+
+        if ($currentChapter.FrameworkDetails.ContainsKey($activeFramework) -and -not [string]::IsNullOrWhiteSpace($currentChapter.FrameworkDetails[$activeFramework]) -and $currentChapter.FrameworkDetails[$activeFramework] -ne $connectionValue) {
+          $currentChapter.FrameworkDetails[$activeFramework] = "$($currentChapter.FrameworkDetails[$activeFramework]); $connectionValue"
+        } else {
+          $currentChapter.FrameworkDetails[$activeFramework] = $connectionValue
+        }
+      } else {
+        $currentChapter.ConnectionNotes += $connectionValue
+        if ([string]::IsNullOrWhiteSpace($currentChapter.Connection)) {
+          $currentChapter.Connection = $connectionValue
+        }
       }
+      continue
+    }
+
+    if (-not [string]::IsNullOrWhiteSpace($activeFramework) -and $trimmed -match '^\-\s+(.+)$') {
+      $fallbackDetail = $matches[1].Trim().TrimEnd('.')
+      if (-not $currentChapter.FrameworkDetails.ContainsKey($activeFramework)) {
+        $currentChapter.FrameworkDetails[$activeFramework] = $fallbackDetail
+      }
+      continue
+    }
+
+    if ($trimmed -match '^\*\*.+\*\*:?$' -or $trimmed -match '^###\s+' -or $trimmed -match '^##\s+') {
+      $activeFramework = ""
     }
   }
 
@@ -861,18 +938,58 @@ function Get-CourseSecurityMappingSnapshot {
 
   $connections = @()
   $rightArrowLocal = [char]0x2192
+  $frameworkPriority = @("OWASP Top 10", "OWASP ASVS", "NIST SSDF")
   foreach ($chapter in $chapters) {
-    $connectionText = if (-not [string]::IsNullOrWhiteSpace($chapter.Connection)) {
-      $chapter.Connection.Trim().TrimEnd('.')
-    } else {
-      "chapter security mapping in progress"
+    $connectionText = ""
+
+    if ($chapter.FrameworkDetails -and $chapter.FrameworkDetails.Count -gt 0) {
+      $orderedFrameworks = @(
+        ($frameworkPriority | Where-Object { $chapter.FrameworkDetails.ContainsKey($_) }) +
+        (@($chapter.FrameworkDetails.Keys | Where-Object { $frameworkPriority -notcontains $_ } | Sort-Object))
+      )
+
+      $frameworkParts = @()
+      foreach ($framework in $orderedFrameworks) {
+        $detail = "$($chapter.FrameworkDetails[$framework])".Trim().TrimEnd('.')
+        if ([string]::IsNullOrWhiteSpace($detail)) {
+          $detail = "mapped controls documented"
+        }
+
+        if ($framework -eq "OWASP Top 10" -and -not [string]::IsNullOrWhiteSpace($chapter.Owasp) -and $detail -notmatch '(?i)owasp|A\d{2}') {
+          $detail = "$detail ($($chapter.Owasp))"
+        }
+
+        $frameworkParts += "${framework}: $detail"
+      }
+
+      if ($frameworkParts.Count -gt 0) {
+        $connectionText = $frameworkParts -join '; '
+      }
     }
 
-    if (-not [string]::IsNullOrWhiteSpace($chapter.Owasp) -and $connectionText -notmatch '(?i)owasp') {
-      $connectionText = "$connectionText ($($chapter.Owasp))"
+    if ([string]::IsNullOrWhiteSpace($connectionText)) {
+      if ($chapter.ConnectionNotes -and $chapter.ConnectionNotes.Count -gt 0) {
+        $connectionText = (@($chapter.ConnectionNotes | Select-Object -Unique) -join '; ').Trim()
+      } elseif (-not [string]::IsNullOrWhiteSpace($chapter.Connection)) {
+        $connectionText = $chapter.Connection.Trim().TrimEnd('.')
+      } else {
+        $connectionText = "chapter security mapping in progress"
+      }
+
+      if (-not [string]::IsNullOrWhiteSpace($chapter.Owasp) -and $connectionText -notmatch '(?i)owasp|A\d{2}') {
+        $connectionText = "$connectionText ($($chapter.Owasp))"
+      }
     }
 
     $connections += "- $($chapter.Title) $rightArrowLocal $connectionText"
+  }
+
+  $orderedDetected = @(
+    ($frameworkPriority | Where-Object { $frameworksDetected -contains $_ }) +
+    (@($frameworksDetected | Where-Object { $frameworkPriority -notcontains $_ } | Sort-Object))
+  )
+  if ($orderedDetected.Count -gt 0) {
+    $snapshot.MappingSummary = $orderedDetected -join ', '
   }
 
   $snapshot.SecurityConnections = $connections
@@ -950,6 +1067,15 @@ function Update-RoadmapCourseSection {
   for ($i = 0; $i -lt $SectionLines.Count; $i++) {
     if ($SectionLines[$i] -match '^(\*\*Status:\*\*.*In Progress\s*\([A-Za-z]+\s+\d{1,2},\s+\d{4}\s*-\s*)(\?|[A-Za-z]+\s+\d{1,2},\s+\d{4})(\).*)$') {
       $SectionLines[$i] = "$($matches[1])$EntryDateText$($matches[3])"
+    }
+  }
+
+  if ($MappingSnapshot -and -not [string]::IsNullOrWhiteSpace($MappingSnapshot.MappingSummary)) {
+    for ($i = 0; $i -lt $SectionLines.Count; $i++) {
+      if ($SectionLines[$i] -match '^\*\*Security Mapping:\*\*') {
+        $SectionLines[$i] = "**Security Mapping:** $($MappingSnapshot.MappingSummary)"
+        break
+      }
     }
   }
 
