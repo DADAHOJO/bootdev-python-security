@@ -15,8 +15,8 @@ Lesson names are normalized into meaningful Python concepts (instead of duplicat
 ## Current Progress
 
 - **Course:** Learn to Code in Python
-- **Status:** ✅ Completed through **Chapter 9 (Lists)**
-- **Active Days Synced:** May 4, 5, 6, 7, 8, 9, 10, 12, 13, 14, 15 (2026)
+- **Status:** ✅ Completed through **Chapter 10 (Dictionaries)**
+- **Active Days Synced:** May 4, 5, 6, 7, 8, 9, 10, 12, 13, 14, 15, 16, 17 (2026)
 
 See `progress-log.md` for the streak-aligned timeline.
 
@@ -40,12 +40,15 @@ bootdev-python-security/
 ├── exercises/
 ├── scripts/
 └── notes/
+    +-- chapter-lesson-summary.md
+    +-- debugging-notes.md
+    +-- python-security-notes.md
     ├── chapter-lesson-summary.md
     ├── python-security-notes.md
     └── debugging-notes.md
 ```
 
-## Chapter Track (1–9)
+## Chapter Track (1�10)
 
 1. **Introduction** – Python basics, syntax, execution model
 2. **Variables** – data types, assignment, string formatting
@@ -56,6 +59,7 @@ bootdev-python-security/
 7. **Comparisons** – conditionals, Boolean logic, decision flow
 8. **Loops** – iteration patterns, loop control, while/for usage
 9. **Lists** – indexing, mutation, operations, tuples, slicing
+10. **Dictionaries** - topic coverage
 
 ## Security Mapping Focus
 

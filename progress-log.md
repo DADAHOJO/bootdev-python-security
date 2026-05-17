@@ -82,12 +82,12 @@ Daily progress tracking for Boot.dev "Learn to Code in Python" (synced to exact 
 - **Lesson Concepts Covered:** Python purpose, code/console fundamentals, syntax error awareness, instruction sequencing
 - **Security Connection:** OWASP A04 - solid foundations for secure-by-design coding habits
 
-## Course Summary (Through Chapter 9)
+## Course Summary (Through Chapter 10 - Dictionaries)
 
 ### Completed Scope
 - **Course:** Learn to Code in Python
-- **Chapters Completed:** 9/9 (Introduction → Lists)
-- **Active Days Logged:** 11 days
+- **Chapters Completed:** 10/10 (Introduction → Dictionaries)
+- **Active Days Logged:** 13 days
 
 ### Chapter Breakdown
 
