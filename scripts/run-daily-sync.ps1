@@ -860,11 +860,6 @@ function Get-CourseSecurityMappingSnapshot {
   foreach ($line in $mappingLines) {
     $trimmed = $line.Trim()
 
-    $detectedFramework = Get-SecurityFrameworkLabel -Text $trimmed
-    if (-not [string]::IsNullOrWhiteSpace($detectedFramework) -and $frameworksDetected -notcontains $detectedFramework) {
-      $frameworksDetected += $detectedFramework
-    }
-
     if ($trimmed -match '^###\s+(?:Chapter|Lesson|Module|Unit|Topic)\s*(\d+)\s*[:\-]\s*(.+)$' -or $trimmed -match '^###\s*(?:CH|Ch)\s*(\d+)\s*[:\-]\s*(.+)$' -or $trimmed -match '^###\s*(\d+)\s*[\.:\-]\s*(.+)$') {
       if ($currentChapter) {
         $chapters += [pscustomobject]$currentChapter
