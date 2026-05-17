@@ -558,7 +558,7 @@ foreach ($progressLog in $progressLogs) {
   }
 
   $logLines.InsertRange($insertIndex, $entryInsertLines)
-  Set-Content -Path $progressLog -Value $logLines
+  Set-Content -Path $progressLog -Value $logLines -Encoding UTF8
   Write-Host "Upserted progress entry in: $progressLog"
 }
 
@@ -597,7 +597,7 @@ if (Test-Path $pythonProgressLogPath) {
     $pythonProgressLines[$activeDaysLoggedIndex] = "- **Active Days Logged:** $(@($pythonSnapshot.ActiveDates).Count) days"
   }
 
-  Set-Content -Path $pythonProgressLogPath -Value $pythonProgressLines
+  Set-Content -Path $pythonProgressLogPath -Value $pythonProgressLines -Encoding UTF8
 }
 
 if (Test-Path $journeyProgressLogPath) {
@@ -614,7 +614,7 @@ if (Test-Path $journeyProgressLogPath) {
     $journeyProgressLines[$journeyActiveIndex] = "- **Active days represented:** $journeyActiveDaysText"
   }
 
-  Set-Content -Path $journeyProgressLogPath -Value $journeyProgressLines
+  Set-Content -Path $journeyProgressLogPath -Value $journeyProgressLines -Encoding UTF8
 }
 
 $statusChapter = if (-not [string]::IsNullOrWhiteSpace($Chapter) -and $Chapter -match '^\d+$') { [int]$Chapter } else { $pythonSnapshot.MaxChapter }
@@ -774,7 +774,7 @@ if (Test-Path $readmePath) {
     }
   }
 
-  Set-Content -Path $readmePath -Value $readmeLines
+  Set-Content -Path $readmePath -Value $readmeLines -Encoding UTF8
   Write-Host "Updated README activity sections: $readmePath"
 }
 
@@ -815,7 +815,7 @@ if (Test-Path $journeyReadmePath) {
     }
   }
 
-  Set-Content -Path $journeyReadmePath -Value $journeyLines
+  Set-Content -Path $journeyReadmePath -Value $journeyLines -Encoding UTF8
   Write-Host "Updated README activity sections: $journeyReadmePath"
 }
 

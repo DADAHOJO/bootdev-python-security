@@ -1,4 +1,4 @@
-# Boot.dev Python Security
+﻿# Boot.dev Python Security
 
 Learning Python through a security lens, with concept-based chapter summaries and OWASP Top 10 mapping.
 
@@ -40,18 +40,12 @@ bootdev-python-security/
 ├── exercises/
 ├── scripts/
 └── notes/
-    +-- chapter-lesson-summary.md
-    +-- debugging-notes.md
-    +-- python-security-notes.md
-    +-- chapter-lesson-summary.md
-    +-- debugging-notes.md
-    +-- python-security-notes.md
     ├── chapter-lesson-summary.md
     ├── python-security-notes.md
     └── debugging-notes.md
 ```
 
-## Chapter Track (1�10)
+## Chapter Track (1–10)
 
 1. **Introduction** – Python basics, syntax, execution model
 2. **Variables** – data types, assignment, string formatting
@@ -62,7 +56,7 @@ bootdev-python-security/
 7. **Comparisons** – conditionals, Boolean logic, decision flow
 8. **Loops** – iteration patterns, loop control, while/for usage
 9. **Lists** – indexing, mutation, operations, tuples, slicing
-10. **Dictionaries** - topic coverage
+10. **Dictionaries** – topic coverage
 
 ## Security Mapping Focus
 
@@ -70,9 +64,9 @@ Every chapter includes:
 - **Boot.dev concept → OWASP Top 10 category → portfolio application**.
 
 Quick examples:
-- Functions → `A03: Injection` (input validation helpers)
-- Scope & error handling → `A05: Security Misconfiguration` (safe state + safe failures)
-- Comparisons/loops/lists → `A09: Security Logging and Monitoring Failures` (event filtering, parsing, trend analysis)
+- Functions → A03: Injection (input validation helpers)
+- Scope & error handling → A05: Security Misconfiguration (safe state + safe failures)
+- Comparisons/loops/lists → A09: Security Logging and Monitoring Failures (event filtering, parsing, trend analysis)
 
 See `security-mapping.md` for full chapter-by-chapter mappings.
 
@@ -125,9 +119,9 @@ Use the root launcher to append this exact format to `progress-log.md` in relate
 ```text
 May 15, 2026
 Streak Activity: 1 Boot.dev/GitHub activity
-Chapter Focus: Chapter 9 - Lists
+Chapter Focus: Chapter 9 – Lists
 Lesson Concepts Covered: slicing, concatenate/contains operations, deletion patterns, tuples, first element/reverse/filter practice
-Security Connection: OWASP A09 - list-based event filtering and result triage pipelines
+Security Connection: OWASP A09 – list-based event filtering and result triage pipelines
 ```
 
 Example daily run from `scripts/`:
@@ -137,7 +131,7 @@ powershell -ExecutionPolicy Bypass -File .\run-daily-sync.ps1 `
   -Chapter 9 `
   -ChapterTitle "Lists" `
   -Concept "slicing, concatenate/contains operations, deletion patterns, tuples, first element/reverse/filter practice" `
-  -Security "OWASP A09 - list-based event filtering and result triage pipelines" `
+  -Security "OWASP A09 – list-based event filtering and result triage pipelines" `
   -StreakActivity 1
 ```
 
