@@ -363,7 +363,7 @@ function Get-ProgressSnapshot {
     return [pscustomobject]$snapshot
   }
 
-  $lines = Get-Content -Path $ProgressLogPath
+  $lines = Get-Content -Path $ProgressLogPath -Encoding UTF8
   $currentDate = $null
   foreach ($line in $lines) {
     $trimmed = $line.Trim()
@@ -480,7 +480,7 @@ foreach ($progressLog in $progressLogs) {
     "Security Connection: $SecurityConnection"
   )
 
-  $logLines = [System.Collections.Generic.List[string]](Get-Content -Path $progressLog)
+  $logLines = [System.Collections.Generic.List[string]](Get-Content -Path $progressLog -Encoding UTF8)
   $existingContent = ($logLines -join [Environment]::NewLine)
   if ($existingContent -like "*$entryMarkdownBlock*") {
     Write-Host "Progress entry already exists in: $progressLog"
@@ -569,9 +569,10 @@ $journeySnapshot = Get-ProgressSnapshot -ProgressLogPath $journeyProgressLogPath
 $pythonActiveDaysText = Format-ActiveDaysList -Dates $pythonSnapshot.ActiveDates
 $journeyActiveDaysText = Format-ActiveDaysList -Dates $journeySnapshot.ActiveDates
 $rangeDash = [char]0x2013
+$statusCheck = [char]0x2705
 
 if (Test-Path $pythonProgressLogPath) {
-  $pythonProgressLines = [System.Collections.Generic.List[string]](Get-Content -Path $pythonProgressLogPath)
+  $pythonProgressLines = [System.Collections.Generic.List[string]](Get-Content -Path $pythonProgressLogPath -Encoding UTF8)
   if ($pythonSnapshot.MaxChapter) {
     $courseSummaryIndex = Find-LineIndex -Lines $pythonProgressLines -Predicate { param($line) $line -match '^## Course Summary' }
     if ($courseSummaryIndex -ge 0) {
@@ -601,7 +602,7 @@ if (Test-Path $pythonProgressLogPath) {
 }
 
 if (Test-Path $journeyProgressLogPath) {
-  $journeyProgressLines = [System.Collections.Generic.List[string]](Get-Content -Path $journeyProgressLogPath)
+  $journeyProgressLines = [System.Collections.Generic.List[string]](Get-Content -Path $journeyProgressLogPath -Encoding UTF8)
   if ($journeySnapshot.MaxChapter) {
     $journeyCourseIndex = Find-LineIndex -Lines $journeyProgressLines -Predicate { param($line) $line -match '^- \*\*Learn to Code in Python:\*\*' }
     if ($journeyCourseIndex -ge 0) {
@@ -626,7 +627,7 @@ $chaptersPath = Join-Path $pythonRepo "chapters"
 $notesPath = Join-Path $pythonRepo "notes"
 
 if (Test-Path $readmePath) {
-  $readmeLines = [System.Collections.Generic.List[string]](Get-Content -Path $readmePath)
+  $readmeLines = [System.Collections.Generic.List[string]](Get-Content -Path $readmePath -Encoding UTF8)
   $treePipe = [char]0x2502
   $treeBranch = [char]0x251C
   $treeEnd = [char]0x2514
@@ -640,9 +641,9 @@ if (Test-Path $readmePath) {
   $statusIndex = Find-LineIndex -Lines $readmeLines -Predicate { param($line) $line -match "^\- \*\*Status:\*\*" }
   if ($statusIndex -ge 0 -and $statusChapter) {
     if (-not [string]::IsNullOrWhiteSpace($statusChapterTitle)) {
-      $readmeLines[$statusIndex] = "- **Status:** ✅ Completed through **Chapter $statusChapter ($statusChapterTitle)**"
+      $readmeLines[$statusIndex] = "- **Status:** $statusCheck Completed through **Chapter $statusChapter ($statusChapterTitle)**"
     } else {
-      $readmeLines[$statusIndex] = "- **Status:** ✅ Completed through **Chapter $statusChapter**"
+      $readmeLines[$statusIndex] = "- **Status:** $statusCheck Completed through **Chapter $statusChapter**"
     }
   }
 
@@ -780,7 +781,7 @@ if (Test-Path $readmePath) {
 
 $journeyReadmePath = Join-Path $projectsRoot "bootdev-security-journey\README.md"
 if (Test-Path $journeyReadmePath) {
-  $journeyLines = [System.Collections.Generic.List[string]](Get-Content -Path $journeyReadmePath)
+  $journeyLines = [System.Collections.Generic.List[string]](Get-Content -Path $journeyReadmePath -Encoding UTF8)
   $timelineIndex = Find-LineIndex -Lines $journeyLines -Predicate { param($line) $line -eq "## Progress Timeline" }
   if ($timelineIndex -ge 0) {
     $sectionEnd = $journeyLines.Count
