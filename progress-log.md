@@ -4,6 +4,18 @@ Daily progress tracking for Boot.dev "Learn to Code in Python" (synced to exact 
 
 ## May 2026
 
+### May 17, 2026
+- **Streak Activity:** 1 Boot.dev/GitHub activity
+- **Chapter Focus:** General learning update
+- **Lesson Concepts Covered:** progress updates
+- **Security Connection:** A09: Security Logging and Monitoring Failures
+
+### May 16, 2026
+- **Streak Activity:** 1 Boot.dev/GitHub activity
+- **Chapter Focus:** Chapter 10 - Dictionaries
+- **Lesson Concepts Covered:** Dictionaries, Duplicate Keys
+- **Security Connection:** A09: Security Logging and Monitoring Failures
+
 ### May 15, 2026
 - **Streak Activity:** 1 Boot.dev/GitHub activity
 - **Chapter Focus:** Chapter 9 - Lists
@@ -108,21 +120,3 @@ Daily progress tracking for Boot.dev "Learn to Code in Python" (synced to exact 
 ## Notes
 
 - Detailed chapter notes and normalized lesson summaries are maintained under `chapters/` and `notes/`.
-
-May 15, 2026
-Streak Activity: 1 Boot.dev/GitHub activity
-Chapter Focus: General learning update
-Lesson Concepts Covered: progress updates
-Security Connection: A09: Security Logging and Monitoring Failures
-
-May 16, 2026
-Streak Activity: 1 Boot.dev/GitHub activity
-Chapter Focus: Chapter 10 - Dictionaries
-Lesson Concepts Covered: Dictionaries, Duplicate Keys
-Security Connection: A09: Security Logging and Monitoring Failures
-
-May 17, 2026
-Streak Activity: 1 Boot.dev/GitHub activity
-Chapter Focus: General learning update
-Lesson Concepts Covered: progress updates
-Security Connection: A09: Security Logging and Monitoring Failures
