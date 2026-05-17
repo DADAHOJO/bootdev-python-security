@@ -421,6 +421,27 @@ function Get-ProgressSnapshot {
   return [pscustomobject]$snapshot
 }
 
+function Find-LineIndex {
+  param(
+    [System.Collections.Generic.List[string]]$Lines,
+    [scriptblock]$Predicate,
+    [int]$StartIndex = 0
+  )
+
+  if (-not $Lines -or -not $Predicate) {
+    return -1
+  }
+
+  $start = [Math]::Max(0, $StartIndex)
+  for ($index = $start; $index -lt $Lines.Count; $index++) {
+    if (& $Predicate $Lines[$index]) {
+      return $index
+    }
+  }
+
+  return -1
+}
+
 $progressLogs = @(
   (Join-Path $projectsRoot "bootdev-python-security\progress-log.md"),
   (Join-Path $projectsRoot "bootdev-security-journey\progress-log.md")
@@ -489,7 +510,7 @@ foreach ($progressLog in $progressLogs) {
     }
   }
 
-  $monthIndex = $logLines.FindIndex({ $_.Trim() -eq $entryMonthHeader })
+  $monthIndex = Find-LineIndex -Lines $logLines -Predicate { param($line) $line.Trim() -eq $entryMonthHeader }
   if ($monthIndex -lt 0) {
     if ($logLines.Count -gt 0 -and -not [string]::IsNullOrWhiteSpace($logLines[$logLines.Count - 1])) {
       $logLines.Add("")
@@ -547,11 +568,12 @@ $pythonSnapshot = Get-ProgressSnapshot -ProgressLogPath $pythonProgressLogPath
 $journeySnapshot = Get-ProgressSnapshot -ProgressLogPath $journeyProgressLogPath
 $pythonActiveDaysText = Format-ActiveDaysList -Dates $pythonSnapshot.ActiveDates
 $journeyActiveDaysText = Format-ActiveDaysList -Dates $journeySnapshot.ActiveDates
+$rangeDash = [char]0x2013
 
 if (Test-Path $pythonProgressLogPath) {
   $pythonProgressLines = [System.Collections.Generic.List[string]](Get-Content -Path $pythonProgressLogPath)
   if ($pythonSnapshot.MaxChapter) {
-    $courseSummaryIndex = $pythonProgressLines.FindIndex({ $_ -match '^## Course Summary' })
+    $courseSummaryIndex = Find-LineIndex -Lines $pythonProgressLines -Predicate { param($line) $line -match '^## Course Summary' }
     if ($courseSummaryIndex -ge 0) {
       if (-not [string]::IsNullOrWhiteSpace($pythonSnapshot.MaxChapterTitle)) {
         $pythonProgressLines[$courseSummaryIndex] = "## Course Summary (Through Chapter $($pythonSnapshot.MaxChapter) - $($pythonSnapshot.MaxChapterTitle))"
@@ -560,7 +582,7 @@ if (Test-Path $pythonProgressLogPath) {
       }
     }
 
-    $chaptersCompletedIndex = $pythonProgressLines.FindIndex({ $_ -match '^- \*\*Chapters Completed:\*\*' })
+    $chaptersCompletedIndex = Find-LineIndex -Lines $pythonProgressLines -Predicate { param($line) $line -match '^- \*\*Chapters Completed:\*\*' }
     if ($chaptersCompletedIndex -ge 0) {
       if (-not [string]::IsNullOrWhiteSpace($pythonSnapshot.MaxChapterTitle)) {
         $pythonProgressLines[$chaptersCompletedIndex] = "- **Chapters Completed:** $($pythonSnapshot.MaxChapter)/$($pythonSnapshot.MaxChapter) (Introduction → $($pythonSnapshot.MaxChapterTitle))"
@@ -570,7 +592,7 @@ if (Test-Path $pythonProgressLogPath) {
     }
   }
 
-  $activeDaysLoggedIndex = $pythonProgressLines.FindIndex({ $_ -match '^- \*\*Active Days Logged:\*\*' })
+  $activeDaysLoggedIndex = Find-LineIndex -Lines $pythonProgressLines -Predicate { param($line) $line -match '^- \*\*Active Days Logged:\*\*' }
   if ($activeDaysLoggedIndex -ge 0) {
     $pythonProgressLines[$activeDaysLoggedIndex] = "- **Active Days Logged:** $(@($pythonSnapshot.ActiveDates).Count) days"
   }
@@ -581,13 +603,13 @@ if (Test-Path $pythonProgressLogPath) {
 if (Test-Path $journeyProgressLogPath) {
   $journeyProgressLines = [System.Collections.Generic.List[string]](Get-Content -Path $journeyProgressLogPath)
   if ($journeySnapshot.MaxChapter) {
-    $journeyCourseIndex = $journeyProgressLines.FindIndex({ $_ -match '^- \*\*Learn to Code in Python:\*\*' })
+    $journeyCourseIndex = Find-LineIndex -Lines $journeyProgressLines -Predicate { param($line) $line -match '^- \*\*Learn to Code in Python:\*\*' }
     if ($journeyCourseIndex -ge 0) {
-      $journeyProgressLines[$journeyCourseIndex] = "- **Learn to Code in Python:** Chapters 1-$($journeySnapshot.MaxChapter) completed and synced to GitHub docs"
+      $journeyProgressLines[$journeyCourseIndex] = "- **Learn to Code in Python:** Chapters 1$rangeDash$($journeySnapshot.MaxChapter) completed and synced to GitHub docs"
     }
   }
 
-  $journeyActiveIndex = $journeyProgressLines.FindIndex({ $_ -match '^- \*\*Active days represented:\*\*' })
+  $journeyActiveIndex = Find-LineIndex -Lines $journeyProgressLines -Predicate { param($line) $line -match '^- \*\*Active days represented:\*\*' }
   if ($journeyActiveIndex -ge 0 -and -not [string]::IsNullOrWhiteSpace($journeyActiveDaysText)) {
     $journeyProgressLines[$journeyActiveIndex] = "- **Active days represented:** $journeyActiveDaysText"
   }
@@ -615,7 +637,7 @@ if (Test-Path $readmePath) {
   $treeLinePattern = '^' + [regex]::Escape($pipeToken) + '\s+(' + [regex]::Escape($treeBranch) + '|' + [regex]::Escape($treeEnd) + ')' + [regex]::Escape("$treeDash$treeDash")
   $noteLinePattern = '^\s{4}(' + [regex]::Escape($treeBranch) + '|' + [regex]::Escape($treeEnd) + ')' + [regex]::Escape("$treeDash$treeDash") + '\s+(.*)'
 
-  $statusIndex = $readmeLines.FindIndex({ $_ -match "^\- \*\*Status:\*\*" })
+  $statusIndex = Find-LineIndex -Lines $readmeLines -Predicate { param($line) $line -match "^\- \*\*Status:\*\*" }
   if ($statusIndex -ge 0 -and $statusChapter) {
     if (-not [string]::IsNullOrWhiteSpace($statusChapterTitle)) {
       $readmeLines[$statusIndex] = "- **Status:** ✅ Completed through **Chapter $statusChapter ($statusChapterTitle)**"
@@ -624,16 +646,16 @@ if (Test-Path $readmePath) {
     }
   }
 
-  $activeIndex = $readmeLines.FindIndex({ $_ -match "^\- \*\*Active Days Synced:\*\*" })
+  $activeIndex = Find-LineIndex -Lines $readmeLines -Predicate { param($line) $line -match "^\- \*\*Active Days Synced:\*\*" }
   if ($activeIndex -ge 0 -and -not [string]::IsNullOrWhiteSpace($pythonActiveDaysText)) {
     $readmeLines[$activeIndex] = "- **Active Days Synced:** $pythonActiveDaysText"
   }
 
-  $repoHeaderIndex = $readmeLines.FindIndex({ $_ -eq "## Repository Structure" })
+  $repoHeaderIndex = Find-LineIndex -Lines $readmeLines -Predicate { param($line) $line -eq "## Repository Structure" }
   if ($repoHeaderIndex -ge 0) {
-    $blockStart = $readmeLines.FindIndex($repoHeaderIndex, { $_ -match '^```text' })
+    $blockStart = Find-LineIndex -Lines $readmeLines -Predicate { param($line) $line -match '^```text' } -StartIndex $repoHeaderIndex
     if ($blockStart -ge 0) {
-      $blockEnd = $readmeLines.FindIndex($blockStart + 1, { $_ -match '^```' })
+      $blockEnd = Find-LineIndex -Lines $readmeLines -Predicate { param($line) $line -match '^```' } -StartIndex ($blockStart + 1)
       if ($blockEnd -gt $blockStart) {
         $blockLines = [System.Collections.Generic.List[string]]($readmeLines.GetRange($blockStart + 1, $blockEnd - $blockStart - 1))
 
@@ -645,7 +667,7 @@ if (Test-Path $readmePath) {
           }
 
           if ($chapterDirs.Count -gt 0) {
-            $chaptersHeaderIndex = $blockLines.FindIndex({ $_ -eq "$branchToken chapters/" })
+            $chaptersHeaderIndex = Find-LineIndex -Lines $blockLines -Predicate { param($line) $line -eq "$branchToken chapters/" }
             if ($chaptersHeaderIndex -ge 0) {
               $removeCount = 0
               for ($i = $chaptersHeaderIndex + 1; $i -lt $blockLines.Count; $i++) {
@@ -670,7 +692,7 @@ if (Test-Path $readmePath) {
 
         if (Test-Path $notesPath) {
           $noteFiles = Get-ChildItem -Path $notesPath -File | Sort-Object Name | Select-Object -ExpandProperty Name
-          $notesHeaderIndex = $blockLines.FindIndex({ $_ -match "notes/" })
+          $notesHeaderIndex = Find-LineIndex -Lines $blockLines -Predicate { param($line) $line -match "notes/" }
           if ($notesHeaderIndex -ge 0) {
             $noteLineIndices = @()
             $existingNoteNames = @()
@@ -707,13 +729,13 @@ if (Test-Path $readmePath) {
     }
   }
 
-  $trackHeaderIndex = $readmeLines.FindIndex({ $_ -match '^## Chapter Track' })
+  $trackHeaderIndex = Find-LineIndex -Lines $readmeLines -Predicate { param($line) $line -match '^## Chapter Track' }
   if ($trackHeaderIndex -ge 0 -and $statusChapter) {
-    $readmeLines[$trackHeaderIndex] = "## Chapter Track (1-$statusChapter)"
+    $readmeLines[$trackHeaderIndex] = "## Chapter Track (1$rangeDash$statusChapter)"
   }
 
   if (-not [string]::IsNullOrWhiteSpace($statusChapterTitle)) {
-    $trackHeaderIndex = $readmeLines.FindIndex({ $_ -match "^## Chapter Track" })
+    $trackHeaderIndex = Find-LineIndex -Lines $readmeLines -Predicate { param($line) $line -match "^## Chapter Track" }
     if ($trackHeaderIndex -ge 0) {
       $trackLineIndices = @()
       for ($i = $trackHeaderIndex + 1; $i -lt $readmeLines.Count; $i++) {
@@ -759,7 +781,7 @@ if (Test-Path $readmePath) {
 $journeyReadmePath = Join-Path $projectsRoot "bootdev-security-journey\README.md"
 if (Test-Path $journeyReadmePath) {
   $journeyLines = [System.Collections.Generic.List[string]](Get-Content -Path $journeyReadmePath)
-  $timelineIndex = $journeyLines.FindIndex({ $_ -eq "## Progress Timeline" })
+  $timelineIndex = Find-LineIndex -Lines $journeyLines -Predicate { param($line) $line -eq "## Progress Timeline" }
   if ($timelineIndex -ge 0) {
     $sectionEnd = $journeyLines.Count
     for ($i = $timelineIndex + 1; $i -lt $journeyLines.Count; $i++) {
