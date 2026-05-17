@@ -666,6 +666,309 @@ function Get-ChapterTrackDetail {
   return $detail
 }
 
+function Get-NormalizedTokens {
+  param([string]$Text)
+
+  if ([string]::IsNullOrWhiteSpace($Text)) {
+    return @()
+  }
+
+  $stopWords = @("learn", "to", "in", "and", "or", "the", "a", "an", "of", "for", "with", "boot", "dev", "course", "current", "build", "start")
+  $rawTokens = ($Text.ToLowerInvariant() -replace '[^a-z0-9]+', ' ') -split '\s+'
+  $tokens = @()
+  foreach ($token in $rawTokens) {
+    if (-not [string]::IsNullOrWhiteSpace($token) -and $token.Length -ge 2 -and $stopWords -notcontains $token -and $tokens -notcontains $token) {
+      $tokens += $token
+    }
+  }
+
+  return $tokens
+}
+
+function Get-CourseRepoInventory {
+  param([string]$ProjectsRoot)
+
+  $inventory = @()
+  if (-not (Test-Path $ProjectsRoot)) {
+    return $inventory
+  }
+
+  $repoDirs = Get-ChildItem -Path $ProjectsRoot -Directory | Where-Object {
+    $_.Name -like 'bootdev-*' -and
+    $_.Name -ne 'bootdev-security-journey' -and
+    $_.Name -ne 'bootdev-secure-projects' -and
+    (Test-Path (Join-Path $_.FullName 'security-mapping.md'))
+  }
+
+  foreach ($repoDir in $repoDirs) {
+    $repoStem = ($repoDir.Name -replace '^bootdev-', '') -replace '[-_]+', ' '
+    $inventory += [pscustomobject]@{
+      Name = $repoDir.Name
+      NameLower = $repoDir.Name.ToLowerInvariant()
+      Path = $repoDir.FullName
+      Tokens = @(Get-NormalizedTokens -Text $repoStem)
+    }
+  }
+
+  return $inventory
+}
+
+function Resolve-CourseRepoPath {
+  param(
+    [string]$CourseHeading,
+    [string]$ProjectsRoot,
+    [object[]]$RepoInventory
+  )
+
+  if ([string]::IsNullOrWhiteSpace($CourseHeading)) {
+    return $null
+  }
+
+  $courseTitle = $CourseHeading.Trim()
+  $repoHint = $null
+
+  if ($courseTitle -match '^(.*?)\s+\[repo:\s*([^\]]+)\s*\]\s*$') {
+    $courseTitle = $matches[1].Trim()
+    $repoHint = $matches[2].Trim()
+  } elseif ($courseTitle -match '^(.*?)\s+\(repo:\s*([^\)]+)\)\s*$') {
+    $courseTitle = $matches[1].Trim()
+    $repoHint = $matches[2].Trim()
+  }
+
+  if (-not [string]::IsNullOrWhiteSpace($repoHint)) {
+    $candidateNames = @($repoHint)
+    if ($repoHint -notmatch '^bootdev-') {
+      $candidateNames += "bootdev-$repoHint"
+    }
+
+    foreach ($candidateName in @($candidateNames | Select-Object -Unique)) {
+      $candidatePath = Join-Path $ProjectsRoot $candidateName
+      if ((Test-Path $candidatePath) -and (Test-Path (Join-Path $candidatePath 'security-mapping.md'))) {
+        return $candidatePath
+      }
+    }
+  }
+
+  if (-not $RepoInventory -or $RepoInventory.Count -eq 0) {
+    return $null
+  }
+
+  $courseTokens = @(Get-NormalizedTokens -Text $courseTitle)
+  if ($courseTokens.Count -eq 0) {
+    return $null
+  }
+
+  $scoredMatches = @()
+  foreach ($repo in $RepoInventory) {
+    $score = 0
+    $matchedTokens = 0
+    foreach ($token in $courseTokens) {
+      if ($repo.Tokens -contains $token) {
+        $score += 3
+        $matchedTokens += 1
+      } elseif ($repo.NameLower -like "*$token*") {
+        $score += 1
+      }
+    }
+
+    if ($score -gt 0) {
+      $scoredMatches += [pscustomobject]@{
+        Path = $repo.Path
+        Score = $score
+        Matched = $matchedTokens
+      }
+    }
+  }
+
+  if ($scoredMatches.Count -eq 0) {
+    return $null
+  }
+
+  $orderedMatches = @($scoredMatches | Sort-Object @{ Expression = 'Score'; Descending = $true }, @{ Expression = 'Matched'; Descending = $true })
+  if ($orderedMatches.Count -gt 1 -and $orderedMatches[0].Score -eq $orderedMatches[1].Score -and $orderedMatches[0].Matched -eq $orderedMatches[1].Matched) {
+    return $null
+  }
+
+  return $orderedMatches[0].Path
+}
+
+function Get-CourseSecurityMappingSnapshot {
+  param([string]$MappingPath)
+
+  $snapshot = [ordered]@{
+    Chapters = @()
+    SecurityConnections = @()
+  }
+
+  if (-not (Test-Path $MappingPath)) {
+    return [pscustomobject]$snapshot
+  }
+
+  $mappingLines = Get-Content -Path $MappingPath -Encoding UTF8
+  $chapters = @()
+  $currentChapter = $null
+  $inOwaspConnection = $false
+
+  foreach ($line in $mappingLines) {
+    $trimmed = $line.Trim()
+
+    if ($trimmed -match '^###\s+Chapter\s+(\d+)\s*:\s*(.+)$') {
+      if ($currentChapter) {
+        $chapters += [pscustomobject]$currentChapter
+      }
+      $currentChapter = [ordered]@{
+        Number = [int]$matches[1]
+        Title = $matches[2].Trim()
+        Owasp = ""
+        Connection = ""
+      }
+      $inOwaspConnection = $false
+      continue
+    }
+
+    if (-not $currentChapter) {
+      continue
+    }
+
+    if ($trimmed -eq '**OWASP Connection**') {
+      $inOwaspConnection = $true
+      continue
+    }
+
+    if ($trimmed -match '^\*\*' -and $trimmed -ne '**OWASP Connection**') {
+      $inOwaspConnection = $false
+    }
+
+    if ($inOwaspConnection) {
+      if ([string]::IsNullOrWhiteSpace($currentChapter.Owasp) -and $trimmed -match '^- \*\*(.+)\*\*$') {
+        $currentChapter.Owasp = $matches[1].Trim()
+        continue
+      }
+
+      if ($trimmed -match '^- Connection:\s*(.+)$') {
+        $currentChapter.Connection = $matches[1].Trim()
+        continue
+      }
+    }
+  }
+
+  if ($currentChapter) {
+    $chapters += [pscustomobject]$currentChapter
+  }
+
+  $chapters = @($chapters | Sort-Object Number)
+  $snapshot.Chapters = $chapters
+
+  $connections = @()
+  $rightArrowLocal = [char]0x2192
+  foreach ($chapter in $chapters) {
+    $connectionText = if (-not [string]::IsNullOrWhiteSpace($chapter.Connection)) {
+      $chapter.Connection.Trim().TrimEnd('.')
+    } else {
+      "chapter security mapping in progress"
+    }
+
+    if (-not [string]::IsNullOrWhiteSpace($chapter.Owasp) -and $connectionText -notmatch '(?i)owasp') {
+      $connectionText = "$connectionText ($($chapter.Owasp))"
+    }
+
+    $connections += "- $($chapter.Title) $rightArrowLocal $connectionText"
+  }
+
+  $snapshot.SecurityConnections = $connections
+  return [pscustomobject]$snapshot
+}
+
+function Set-CourseSectionBlock {
+  param(
+    [System.Collections.Generic.List[string]]$SectionLines,
+    [string[]]$HeaderCandidates,
+    [string]$HeaderText,
+    [string[]]$BulletLines
+  )
+
+  if (-not $SectionLines -or -not $BulletLines -or $BulletLines.Count -eq 0) {
+    return
+  }
+
+  $headerIndex = -1
+  for ($i = 0; $i -lt $SectionLines.Count; $i++) {
+    if ($HeaderCandidates -contains $SectionLines[$i].Trim()) {
+      $headerIndex = $i
+      break
+    }
+  }
+
+  if ($headerIndex -lt 0) {
+    if ($SectionLines.Count -gt 0 -and -not [string]::IsNullOrWhiteSpace($SectionLines[$SectionLines.Count - 1])) {
+      [void]$SectionLines.Add("")
+    }
+    [void]$SectionLines.Add($HeaderText)
+    $headerIndex = $SectionLines.Count - 1
+  } else {
+    $SectionLines[$headerIndex] = $HeaderText
+  }
+
+  $blockStart = $headerIndex + 1
+  $blockEnd = $SectionLines.Count
+  for ($i = $blockStart; $i -lt $SectionLines.Count; $i++) {
+    $trimmed = $SectionLines[$i].Trim()
+    if ($trimmed -match '^\*\*.+\*\*:?$' -or $trimmed -match '^###\s+' -or $trimmed -match '^##\s+') {
+      $blockEnd = $i
+      break
+    }
+  }
+
+  if ($blockEnd -gt $blockStart) {
+    $SectionLines.RemoveRange($blockStart, $blockEnd - $blockStart)
+  }
+
+  $renderedBullets = [System.Collections.Generic.List[string]]::new()
+  foreach ($line in $BulletLines) {
+    if (-not [string]::IsNullOrWhiteSpace($line)) {
+      [void]$renderedBullets.Add($line)
+    }
+  }
+  [void]$renderedBullets.Add("")
+
+  if ($renderedBullets.Count -gt 0) {
+    $SectionLines.InsertRange($blockStart, $renderedBullets)
+  }
+}
+
+function Update-RoadmapCourseSection {
+  param(
+    [System.Collections.Generic.List[string]]$SectionLines,
+    [string]$EntryDateText,
+    [pscustomobject]$MappingSnapshot
+  )
+
+  if (-not $SectionLines) {
+    return [System.Collections.Generic.List[string]]::new()
+  }
+
+  for ($i = 0; $i -lt $SectionLines.Count; $i++) {
+    if ($SectionLines[$i] -match '^(\*\*Status:\*\*.*In Progress\s*\([A-Za-z]+\s+\d{1,2},\s+\d{4}\s*-\s*)(\?|[A-Za-z]+\s+\d{1,2},\s+\d{4})(\).*)$') {
+      $SectionLines[$i] = "$($matches[1])$EntryDateText$($matches[3])"
+    }
+  }
+
+  if ($MappingSnapshot -and $MappingSnapshot.Chapters -and $MappingSnapshot.Chapters.Count -gt 0) {
+    $chapterLines = @()
+    foreach ($chapter in @($MappingSnapshot.Chapters | Sort-Object Number)) {
+      $chapterLines += "- [x] $($chapter.Title)"
+    }
+
+    Set-CourseSectionBlock -SectionLines $SectionLines -HeaderCandidates @("**Chapters:**") -HeaderText "**Chapters:**" -BulletLines $chapterLines
+
+    if ($MappingSnapshot.SecurityConnections -and $MappingSnapshot.SecurityConnections.Count -gt 0) {
+      Set-CourseSectionBlock -SectionLines $SectionLines -HeaderCandidates @("**Security Connections:**", "**Planned Security Connections:**") -HeaderText "**Security Connections:**" -BulletLines $MappingSnapshot.SecurityConnections
+    }
+  }
+
+  return $SectionLines
+}
+
 $progressLogs = @(
   (Join-Path $projectsRoot "bootdev-python-security\progress-log.md"),
   (Join-Path $projectsRoot "bootdev-security-journey\progress-log.md")
@@ -1412,10 +1715,49 @@ if (Test-Path $journeyReadmePath) {
 $journeyRoadmapPath = Join-Path $projectsRoot "bootdev-security-journey\roadmap.md"
 if (Test-Path $journeyRoadmapPath) {
   $journeyRoadmapLines = [System.Collections.Generic.List[string]](Get-Content -Path $journeyRoadmapPath -Encoding UTF8)
-  for ($i = 0; $i -lt $journeyRoadmapLines.Count; $i++) {
-    if ($journeyRoadmapLines[$i] -match '^(\*\*Status:\*\*.*In Progress\s*\([A-Za-z]+\s+\d{1,2},\s+\d{4}\s*-\s*)(\?|[A-Za-z]+\s+\d{1,2},\s+\d{4})(\).*)$') {
-      $journeyRoadmapLines[$i] = "$($matches[1])$entryDateText$($matches[3])"
+  $courseRepoInventory = @(Get-CourseRepoInventory -ProjectsRoot $projectsRoot)
+  $mappingSnapshotCache = @{}
+
+  $index = 0
+  while ($index -lt $journeyRoadmapLines.Count) {
+    if ($journeyRoadmapLines[$index] -match '^###\s+(.+)$') {
+      $courseHeading = $matches[1].Trim()
+      $sectionStart = $index
+      $sectionEnd = $journeyRoadmapLines.Count
+      for ($j = $sectionStart + 1; $j -lt $journeyRoadmapLines.Count; $j++) {
+        if ($journeyRoadmapLines[$j] -match '^###\s+' -or $journeyRoadmapLines[$j] -match '^##\s+') {
+          $sectionEnd = $j
+          break
+        }
+      }
+
+      $sectionLines = [System.Collections.Generic.List[string]]::new()
+      for ($j = $sectionStart; $j -lt $sectionEnd; $j++) {
+        [void]$sectionLines.Add($journeyRoadmapLines[$j])
+      }
+
+      $courseRepoPath = Resolve-CourseRepoPath -CourseHeading $courseHeading -ProjectsRoot $projectsRoot -RepoInventory $courseRepoInventory
+      $mappingSnapshot = $null
+      if (-not [string]::IsNullOrWhiteSpace($courseRepoPath)) {
+        if (-not $mappingSnapshotCache.ContainsKey($courseRepoPath)) {
+          $mappingSnapshotCache[$courseRepoPath] = Get-CourseSecurityMappingSnapshot -MappingPath (Join-Path $courseRepoPath 'security-mapping.md')
+        }
+        $mappingSnapshot = $mappingSnapshotCache[$courseRepoPath]
+      }
+
+      $updatedSectionLines = Update-RoadmapCourseSection -SectionLines $sectionLines -EntryDateText $entryDateText -MappingSnapshot $mappingSnapshot
+      $journeyRoadmapLines.RemoveRange($sectionStart, $sectionEnd - $sectionStart)
+      if ($updatedSectionLines.Count -gt 0) {
+        for ($k = 0; $k -lt $updatedSectionLines.Count; $k++) {
+          $journeyRoadmapLines.Insert($sectionStart + $k, [string]$updatedSectionLines[$k])
+        }
+      }
+
+      $index = $sectionStart + $updatedSectionLines.Count
+      continue
     }
+
+    $index++
   }
 
   Set-Content -Path $journeyRoadmapPath -Value $journeyRoadmapLines -Encoding UTF8
