@@ -1,4 +1,4 @@
-# Python Debugging Notes (Chapter 5 Aligned)
+﻿# Python Debugging Notes (Chapter 5 Aligned)
 
 Focused debugging notes aligned to **Chapter 5: Testing and Debugging** in Boot.dev.
 
@@ -58,3 +58,10 @@ def process(path: str) -> str:
 - [ ] No stack traces in user-facing strings
 - [ ] Failure paths tested
 - [ ] Commit message describes bug class and fix
+
+## Latest Learning Sync
+
+- **Date:** May 16, 2026
+- **Chapter focus:** Chapter 10 - Dictionaries
+- **Security mapping:** A09: Security Logging and Monitoring Failures
+

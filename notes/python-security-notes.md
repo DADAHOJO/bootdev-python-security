@@ -1,4 +1,4 @@
-# Python Security Notes (Chapters 1-9)
+﻿# Python Security Notes (Chapters 1-10)
 
 Concise security-focused notes that map the first 9 Boot.dev Python chapters to practical software security use cases.
 
@@ -80,7 +80,14 @@ def suspicious(events: list[str]) -> list[str]:
     return [e for e in events if "failed" in e.lower()]
 ```
 
+## Chapter 10: Dictionaries
+
+**Concepts:** Dictionaries, Duplicate Keys, Accessing Dictionary Values, Setting Dictionary Values, Updating Dictionary Values, Deleting Dictionary Values, ....
+
+**Security use:** practical chapter application aligned to A09: Security Logging and Monitoring Failures.
+
 ## OWASP Crosswalk (Quick)
+- CH10 → A09
 
 - CH1 → A04
 - CH2 → A05

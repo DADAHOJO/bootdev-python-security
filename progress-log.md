@@ -86,7 +86,7 @@ Daily progress tracking for Boot.dev "Learn to Code in Python" (synced to exact 
 
 ### Completed Scope
 - **Course:** Learn to Code in Python
-- **Chapters Completed:** 10/10 (Introduction â†’ Dictionaries)
+- **Chapters Completed:** 10/10 (Introduction → Dictionaries)
 - **Active Days Logged:** 13 days
 
 ### Chapter Breakdown
@@ -102,6 +102,7 @@ Daily progress tracking for Boot.dev "Learn to Code in Python" (synced to exact 
 | 7 | Comparisons | May 10 | OWASP A01/A09 (decision and policy logic) |
 | 8 | Loops | May 12-13 | OWASP A09 (monitoring and iteration reliability) |
 | 9 | Lists | May 14-15 | OWASP A09 (event set processing and triage) |
+| 10 | Dictionaries | May 4-16 | OWASP A09: Security Logging and Monitoring Failures |
 
 ### Portfolio Direction
 
