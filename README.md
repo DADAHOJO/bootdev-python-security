@@ -15,7 +15,7 @@ Lesson names are normalized into meaningful Python concepts (instead of duplicat
 ## Current Progress
 
 - **Course:** Learn to Code in Python
-- **Status:** âœ… Completed through **Chapter 10 (Dictionaries)**
+- **Status:** ✅ Completed through **Chapter 10 (Dictionaries)**
 - **Active Days Synced:** May 4, 5, 6, 7, 8, 9, 10, 12, 13, 14, 15, 16, 17 (2026)
 
 See `progress-log.md` for the streak-aligned timeline.
