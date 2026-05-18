@@ -1,6 +1,6 @@
 ﻿# Chapter Lesson Summary (Concept-Normalized)
 
-This file captures concise, portfolio-friendly lesson concepts from Boot.dev Chapters 1–9.
+This file captures concise, portfolio-friendly lesson concepts from Boot.dev Chapters 1–11.
 
 ## CH1: Introduction
 - Python purpose and programming mindset
