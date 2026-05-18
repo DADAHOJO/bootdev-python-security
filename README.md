@@ -82,17 +82,20 @@ Use this for all three repos:
 
 ### 1) Daily root launcher (recommended)
 
-From the `scripts/` folder:
+From your main `CascadeProjects` or `Boot.Dev` workspace root:
 
 ```powershell
-.\sync-bootdev.cmd
+.\sync-bootdev.cmd -EntryDate "YYYY-MM-DD"
 ```
 
 This will:
-- OCR today’s screenshots from `Boot.Dev-screenshots/`
-- Auto-map OWASP security category format
-- Append progress entries and update README activity sections
-- Commit, rebase, and push all repos
+- Discover screenshots in `Boot.Dev-screenshots/`
+- Prompt you to use screenshots from `[T]oday or [P]revious date`
+- OCR the screenshots to extract Chapter, Title, and Concepts
+- Append progress entries to `progress-log.md`
+- Update `README.md` activity sections
+- Sync chapter/security mappings to `roadmap.md`
+- Commit, pull, and push all three repos
 
 #### OCR setup (one-time)
 
@@ -109,62 +112,19 @@ Verify Python 3.11 is available:
 py -3.11 --version
 ```
 
-### 2) Manual daily run
+### 2) Manual run via PowerShell (No Screenshots)
+
+If you don't want to use screenshots, you can run the PowerShell script directly and pass the lesson data as text:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\daily-sync.ps1 -Message "Day X: Boot.dev Python progress + security mapping"
+powershell -ExecutionPolicy Bypass -File .\bootdev-python-security\scripts\run-daily-sync.ps1 `
+  -Chapter 11 `
+  -ChapterTitle "Sets" `
+  -Concept "hash maps, set operations, deduplication" `
+  -EntryDate "2026-05-18"
 ```
 
-### 2b) Recommended root launcher (auto progress entry + sync)
-
-Use the root launcher to append this exact format to `progress-log.md` in related repos before syncing:
-
-```text
-May 15, 2026
-Streak Activity: 1 Boot.dev/GitHub activity
-Chapter Focus: Chapter 9 – Lists
-Lesson Concepts Covered: slicing, concatenate/contains operations, deletion patterns, tuples, first element/reverse/filter practice
-Security Connection: OWASP A09 – list-based event filtering and result triage pipelines
-```
-
-Example daily run from `scripts/`:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .\run-daily-sync.ps1 `
-  -Chapter 9 `
-  -ChapterTitle "Lists" `
-  -Concept "slicing, concatenate/contains operations, deletion patterns, tuples, first element/reverse/filter practice" `
-  -Security "OWASP A09 – list-based event filtering and result triage pipelines" `
-  -StreakActivity 1
-```
-
-Optional explicit fields:
-- `-ChapterSummary`
-- `-ChapterFolder`
-- `-ChapterFocus`
-- `-LessonConceptsCovered`
-- `-SecurityConnection`
-- `-EntryDate`
-
-After you finish learning for the day:
-1. Save your changes in each repo.
-2. Run the root launcher once from `bootdev-python-security/scripts`.
-3. If a rebase conflict appears, resolve it in that repo and rerun the same command.
-
-Optional commit message generator:
-
-```powershell
-$msg = powershell -ExecutionPolicy Bypass -File .\scripts\generate-commit-message.ps1 -Chapter 8 -Concept "loops-practice" -Security "A09-monitoring"
-powershell -ExecutionPolicy Bypass -File .\scripts\daily-sync.ps1 -Message $msg
-```
-
-### 3) Optional scheduled run
-
-Use **Task Scheduler**:
-- Trigger: Daily at your preferred time
-- Action: `powershell.exe`
-- Arguments: `-ExecutionPolicy Bypass -File ".\scripts\daily-sync.ps1"`
-- Start in: your `bootdev-python-security` repo root
+This bypasses OCR and immediately uses the text to update all markdown files and push the repos.
 
 ## Commit Quality Rules
 
