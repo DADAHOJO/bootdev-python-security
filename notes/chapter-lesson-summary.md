@@ -78,3 +78,11 @@ This file captures concise, portfolio-friendly lesson concepts from Boot.dev Cha
 - Vowels
 - Set Subtraction
 
+## CH12: Errors
+- Errors and Exceptions in Python
+- Try/Except Review
+- Raising Exceptions Review
+- Different Types of Exceptions
+- Raising Your Own Exceptions
+- Purchase
+

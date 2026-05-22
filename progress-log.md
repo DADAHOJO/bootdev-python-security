@@ -4,6 +4,12 @@ Daily progress tracking for Boot.dev "Learn to Code in Python" (synced to exact 
 
 ## May 2026
 
+### May 23, 2026
+- **Streak Activity:** 1 Boot.dev/GitHub activity
+- **Chapter Focus:** Chapter 12 - Errors
+- **Lesson Concepts Covered:** Errors and Exceptions in Python, Try/Except Review, Raising Exceptions Review, Different Types of Exceptions, Raising Your Own Exceptions, Purchase
+- **Security Connection:** A09: Security Logging and Monitoring Failures
+
 ### May 17, 2026
 - **Streak Activity:** 1 Boot.dev/GitHub activity
 - **Chapter Focus:** Chapter 11 - Sets
@@ -82,12 +88,12 @@ Daily progress tracking for Boot.dev "Learn to Code in Python" (synced to exact 
 - **Lesson Concepts Covered:** Python purpose, code/console fundamentals, syntax error awareness, instruction sequencing
 - **Security Connection:** OWASP A04 - solid foundations for secure-by-design coding habits
 
-## Course Summary (Through Chapter 11 - Sets)
+## Course Summary (Through Chapter 12 - Errors)
 
 ### Completed Scope
 - **Course:** Learn to Code in Python
-- **Chapters Completed:** 11/11 (Introduction → Sets)
-- **Active Days Logged:** 13 days
+- **Chapters Completed:** 12/12 (Introduction → Errors)
+- **Active Days Logged:** 14 days
 
 ### Chapter Breakdown
 
@@ -104,6 +110,7 @@ Daily progress tracking for Boot.dev "Learn to Code in Python" (synced to exact 
 | 9 | Lists | May 14-15 | OWASP A09 (event set processing and triage) |
 | 10 | Dictionaries | May 16 | OWASP A09: Security Logging and Monitoring Failures |
 | 11 | Sets | May 17 | OWASP A09: Security Logging and Monitoring Failures |
+| 12 | Errors | May 23 | OWASP A09: Security Logging and Monitoring Failures |
 
 ### Portfolio Direction
 

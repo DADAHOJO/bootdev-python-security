@@ -1,4 +1,4 @@
-﻿# Python Security Notes (Chapters 1-11)
+﻿# Python Security Notes (Chapters 1-12)
 
 Concise security-focused notes that map the first 9 Boot.dev Python chapters to practical software security use cases.
 
@@ -92,6 +92,12 @@ def suspicious(events: list[str]) -> list[str]:
 
 **Security use:** practical chapter application aligned to A09: Security Logging and Monitoring Failures.
 
+## Chapter 12: Errors
+
+**Concepts:** Errors and Exceptions in Python, Try/Except Review, Raising Exceptions Review, Different Types of Exceptions, Raising Your Own Exceptions, Purchase.
+
+**Security use:** practical chapter application aligned to A09: Security Logging and Monitoring Failures.
+
 ## OWASP Crosswalk (Quick)
 - CH1 → A04
 - CH2 → A05
@@ -104,6 +110,7 @@ def suspicious(events: list[str]) -> list[str]:
 - CH9 → A09
 - CH10 → A09
 - CH11 → A09
+- CH12 → A09
 
 ## Immediate Portfolio Steps
 

@@ -1,4 +1,4 @@
-﻿# Python to OWASP Security Mapping (Chapters 1-11)
+﻿# Python to OWASP Security Mapping (Chapters 1-12)
 
 Mapping Boot.dev Python chapters to OWASP Top 10 risks with portfolio-ready security applications.
 
@@ -186,6 +186,24 @@ Lesson labels are normalized to meaningful concept names from the chapter conten
 - Apply Chapter 11 concepts in secure coding exercises and repo artifacts.
 - Keep chapter mappings synchronized with logs, notes, and roadmap updates.
 
+### Chapter 12: Errors
+
+**Core Concepts**
+- Errors and Exceptions in Python
+- Try/Except Review
+- Raising Exceptions Review
+- Different Types of Exceptions
+- Raising Your Own Exceptions
+- Purchase
+
+**OWASP Connection**
+- **OWASP A09: Security Logging and Monitoring Failures**
+- Connection: chapter concepts are mapped to this OWASP area for practical secure coding behavior.
+
+**Portfolio Application**
+- Apply Chapter 12 concepts in secure coding exercises and repo artifacts.
+- Keep chapter mappings synchronized with logs, notes, and roadmap updates.
+
 ## Quick OWASP Coverage Matrix
 
 | Chapter | OWASP Focus |
@@ -201,6 +219,7 @@ Lesson labels are normalized to meaningful concept names from the chapter conten
 | 9 Lists | A09 |
 | 10 Dictionaries | A09 |
 | 11 Sets | A09 |
+| 12 Errors | A09 |
 
 ## Portfolio Project Bridge
 
