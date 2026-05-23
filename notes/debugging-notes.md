@@ -61,7 +61,7 @@ def process(path: str) -> str:
 
 ## Latest Learning Sync
 
-- **Date:** May 23, 2026
-- **Chapter focus:** Chapter 12 - Errors
+- **Date:** May 24, 2026
+- **Chapter focus:** Chapter 13 - Type Hints
 - **Security mapping:** A09: Security Logging and Monitoring Failures
 

@@ -15,8 +15,8 @@ Lesson names are normalized into meaningful Python concepts (instead of duplicat
 ## Current Progress
 
 - **Course:** Learn to Code in Python
-- **Status:** ✅ Completed through **Chapter 12 (Errors)**
-- **Active Days Synced:** May: 4 - 23 (2026)
+- **Status:** ✅ Completed through **Chapter 13 (Type Hints)**
+- **Active Days Synced:** May: 4 - 24 (2026)
 
 See `progress-log.md` for the streak-aligned timeline.
 
@@ -39,7 +39,8 @@ bootdev-python-security/
 │   ├── 09-lists/
 │   ├── 10-dictionaries/
 │   ├── 11-sets/
-│   └── 12-errors/
+│   ├── 12-errors/
+│   └── 13-type-hints/
 ├── exercises/
 ├── scripts/
 └── notes/
@@ -48,7 +49,7 @@ bootdev-python-security/
     └── debugging-notes.md
 ```
 
-## Chapter Track (1–12)
+## Chapter Track (1–13)
 
 1. **Introduction** – Python basics, syntax, execution model
 2. **Variables** – data types, assignment, string formatting
@@ -62,6 +63,7 @@ bootdev-python-security/
 10. **Dictionaries** – Dictionaries, Duplicate Keys, Accessing Dictionary Values, Setting Dictionary Values, Updating Dictionary Values, Deleting Dictionary Values, ...
 11. **Sets** – Sets, Sets Quiz, Vowels, Set Subtraction
 12. **Errors** – Errors and Exceptions in Python, Try/Except Review, Raising Exceptions Review, Different Types of Exceptions, Raising Your Own Exceptions, Purchase
+13. **Type Hints** – Basic Types, Function Parameters, Return Types, Fixing Type Hints, List and Set Hints, Dictionary Hints, ...
 
 ## Security Mapping Focus
 

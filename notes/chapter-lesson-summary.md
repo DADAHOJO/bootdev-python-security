@@ -86,3 +86,16 @@ This file captures concise, portfolio-friendly lesson concepts from Boot.dev Cha
 - Raising Your Own Exceptions
 - Purchase
 
+## CH13: Type Hints
+- Basic Types
+- Function Parameters
+- Return Types
+- Fixing Type Hints
+- List and Set Hints
+- Dictionary Hints
+- Tuple Hints
+- Specific Container Types
+- Nested Types
+- Optional Values
+- Fix Code With Type Hints
+

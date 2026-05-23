@@ -1,4 +1,4 @@
-﻿# Python Security Notes (Chapters 1-12)
+﻿# Python Security Notes (Chapters 1-13)
 
 Concise security-focused notes that map the first 9 Boot.dev Python chapters to practical software security use cases.
 
@@ -98,6 +98,12 @@ def suspicious(events: list[str]) -> list[str]:
 
 **Security use:** practical chapter application aligned to A09: Security Logging and Monitoring Failures.
 
+## Chapter 13: Type Hints
+
+**Concepts:** Basic Types, Function Parameters, Return Types, Fixing Type Hints, List and Set Hints, Dictionary Hints, ....
+
+**Security use:** practical chapter application aligned to A09: Security Logging and Monitoring Failures.
+
 ## OWASP Crosswalk (Quick)
 - CH1 → A04
 - CH2 → A05
@@ -111,6 +117,7 @@ def suspicious(events: list[str]) -> list[str]:
 - CH10 → A09
 - CH11 → A09
 - CH12 → A09
+- CH13 → A09
 
 ## Immediate Portfolio Steps
 
