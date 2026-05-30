@@ -1,4 +1,4 @@
-﻿# Python Security Notes (Chapters 1-14)
+﻿# Python Security Notes (Chapters 1-15)
 
 Concise security-focused notes that map the first 9 Boot.dev Python chapters to practical software security use cases.
 
@@ -110,6 +110,12 @@ def suspicious(events: list[str]) -> list[str]:
 
 **Security use:** practical chapter application aligned to A09: Security Logging and Monitoring Failures.
 
+## Chapter 15: Classes
+
+**Concepts:** Classes, Methods, Methods Can Return, Methods vs. Functions, Constructors, Multiple Objects, ....
+
+**Security use:** practical chapter application aligned to A09: Security Logging and Monitoring Failures.
+
 ## OWASP Crosswalk (Quick)
 - CH1 → A04
 - CH2 → A05
@@ -125,6 +131,7 @@ def suspicious(events: list[str]) -> list[str]:
 - CH12 → A09
 - CH13 → A09
 - CH14 → A09
+- CH15 → A09
 
 ## Immediate Portfolio Steps
 

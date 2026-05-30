@@ -1,4 +1,4 @@
-﻿# Python to OWASP Security Mapping (Chapters 1-14)
+﻿# Python to OWASP Security Mapping (Chapters 1-15)
 
 Mapping Boot.dev Python chapters to OWASP Top 10 risks with portfolio-ready security applications.
 
@@ -237,6 +237,25 @@ Lesson labels are normalized to meaningful concept names from the chapter conten
 - Apply Chapter 14 concepts in secure coding exercises and repo artifacts.
 - Keep chapter mappings synchronized with logs, notes, and roadmap updates.
 
+### Chapter 15: Classes
+
+**Core Concepts**
+- Classes
+- Methods
+- Methods Can Return
+- Methods vs. Functions
+- Constructors
+- Multiple Objects
+- Class Variables vs. Instance Variables
+
+**OWASP Connection**
+- **OWASP A09: Security Logging and Monitoring Failures**
+- Connection: chapter concepts are mapped to this OWASP area for practical secure coding behavior.
+
+**Portfolio Application**
+- Apply Chapter 15 concepts in secure coding exercises and repo artifacts.
+- Keep chapter mappings synchronized with logs, notes, and roadmap updates.
+
 ## Quick OWASP Coverage Matrix
 
 | Chapter | OWASP Focus |
@@ -255,6 +274,7 @@ Lesson labels are normalized to meaningful concept names from the chapter conten
 | 12 Errors | A09 |
 | 13 Type Hints | A09 |
 | 14 Object-Oriented Programming | A09 |
+| 15 Classes | A09 |
 
 ## Portfolio Project Bridge
 

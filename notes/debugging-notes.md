@@ -62,6 +62,6 @@ def process(path: str) -> str:
 ## Latest Learning Sync
 
 - **Date:** May 30, 2026
-- **Chapter focus:** Chapter 14 - Object-Oriented Programming
+- **Chapter focus:** Chapter 15 - Classes
 - **Security mapping:** A09: Security Logging and Monitoring Failures
 

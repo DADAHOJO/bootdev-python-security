@@ -102,3 +102,12 @@ This file captures concise, portfolio-friendly lesson concepts from Boot.dev Cha
 ## CH14: Object-Oriented Programming
 - Welcome to Object-Oriented Programming
 
+## CH15: Classes
+- Classes
+- Methods
+- Methods Can Return
+- Methods vs. Functions
+- Constructors
+- Multiple Objects
+- Class Variables vs. Instance Variables
+
