@@ -99,3 +99,6 @@ This file captures concise, portfolio-friendly lesson concepts from Boot.dev Cha
 - Optional Values
 - Fix Code With Type Hints
 
+## CH14: Object-Oriented Programming
+- Welcome to Object-Oriented Programming
+

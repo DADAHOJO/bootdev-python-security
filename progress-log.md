@@ -4,6 +4,12 @@ Daily progress tracking for Boot.dev "Learn to Code in Python" (synced to exact 
 
 ## May 2026
 
+### May 30, 2026
+- **Streak Activity:** 1 Boot.dev/GitHub activity
+- **Chapter Focus:** Chapter 14 - Object-Oriented Programming
+- **Lesson Concepts Covered:** Welcome to Object-Oriented Programming
+- **Security Connection:** A09: Security Logging and Monitoring Failures
+
 ### May 24, 2026
 - **Streak Activity:** 1 Boot.dev/GitHub activity
 - **Chapter Focus:** Chapter 13 - Type Hints
@@ -94,12 +100,12 @@ Daily progress tracking for Boot.dev "Learn to Code in Python" (synced to exact 
 - **Lesson Concepts Covered:** Python purpose, code/console fundamentals, syntax error awareness, instruction sequencing
 - **Security Connection:** OWASP A04 - solid foundations for secure-by-design coding habits
 
-## Course Summary (Through Chapter 13 - Type Hints)
+## Course Summary (Through Chapter 14 - Object-Oriented Programming)
 
 ### Completed Scope
 - **Course:** Learn to Code in Python
-- **Chapters Completed:** 13/13 (Introduction → Type Hints)
-- **Active Days Logged:** 15 days
+- **Chapters Completed:** 14/14 (Introduction → Object-Oriented Programming)
+- **Active Days Logged:** 16 days
 
 ### Chapter Breakdown
 
@@ -118,6 +124,7 @@ Daily progress tracking for Boot.dev "Learn to Code in Python" (synced to exact 
 | 11 | Sets | May 17 | OWASP A09: Security Logging and Monitoring Failures |
 | 12 | Errors | May 23 | OWASP A09: Security Logging and Monitoring Failures |
 | 13 | Type Hints | May 24 | OWASP A09: Security Logging and Monitoring Failures |
+| 14 | Object-Oriented Programming | May 30 | OWASP A09: Security Logging and Monitoring Failures |
 
 ### Portfolio Direction
 
