@@ -117,3 +117,9 @@ This file captures concise, portfolio-friendly lesson concepts from Boot.dev Cha
 - Encapsulation in Python
 - Encapsulation Practice
 
+## CH17: Abstraction
+- Abstraction
+- Abstraction vs. Encapsulation
+- How OOP Developers Think
+- Abstraction Practice
+
