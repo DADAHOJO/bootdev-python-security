@@ -15,8 +15,8 @@ Lesson names are normalized into meaningful Python concepts (instead of duplicat
 ## Current Progress
 
 - **Course:** Learn to Code in Python
-- **Status:** ✅ Completed through **Chapter 15 (Classes)**
-- **Active Days Synced:** May: 4 - 30 (2026)
+- **Status:** ✅ Completed through **Chapter 16 (Encapsulation)**
+- **Active Days Synced:** May: 4 - 31 (2026)
 
 See `progress-log.md` for the streak-aligned timeline.
 
@@ -42,7 +42,8 @@ bootdev-python-security/
 │   ├── 12-errors/
 │   ├── 13-type-hints/
 │   ├── 14-object-oriented-programming/
-│   └── 15-classes/
+│   ├── 15-classes/
+│   └── 16-encapsulation/
 ├── exercises/
 ├── scripts/
 └── notes/
@@ -51,7 +52,7 @@ bootdev-python-security/
     └── debugging-notes.md
 ```
 
-## Chapter Track (1–15)
+## Chapter Track (1–16)
 
 1. **Introduction** – Python basics, syntax, execution model
 2. **Variables** – data types, assignment, string formatting
@@ -68,6 +69,7 @@ bootdev-python-security/
 13. **Type Hints** – Basic Types, Function Parameters, Return Types, Fixing Type Hints, List and Set Hints, Dictionary Hints, ...
 14. **Object-Oriented Programming** – Welcome to Object-Oriented Programming
 15. **Classes** – Classes, Methods, Methods Can Return, Methods vs. Functions, Constructors, Multiple Objects, ...
+16. **Encapsulation** – Encapsulation, private and public members, Encapsulation in Python, Encapsulation Practice
 
 ## Security Mapping Focus
 

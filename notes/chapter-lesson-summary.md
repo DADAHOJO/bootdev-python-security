@@ -111,3 +111,9 @@ This file captures concise, portfolio-friendly lesson concepts from Boot.dev Cha
 - Multiple Objects
 - Class Variables vs. Instance Variables
 
+## CH16: Encapsulation
+- Encapsulation
+- private and public members
+- Encapsulation in Python
+- Encapsulation Practice
+

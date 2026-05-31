@@ -4,6 +4,12 @@ Daily progress tracking for Boot.dev "Learn to Code in Python" (synced to exact 
 
 ## May 2026
 
+### May 31, 2026
+- **Streak Activity:** 1 Boot.dev/GitHub activity
+- **Chapter Focus:** Chapter 16 - Encapsulation
+- **Lesson Concepts Covered:** Encapsulation, private and public members, Encapsulation in Python, Encapsulation Practice
+- **Security Connection:** A09: Security Logging and Monitoring Failures
+
 ### May 30, 2026
 - **Streak Activity:** 1 Boot.dev/GitHub activity
 - **Chapter Focus:** Chapter 15 - Classes
@@ -100,12 +106,12 @@ Daily progress tracking for Boot.dev "Learn to Code in Python" (synced to exact 
 - **Lesson Concepts Covered:** Python purpose, code/console fundamentals, syntax error awareness, instruction sequencing
 - **Security Connection:** OWASP A04 - solid foundations for secure-by-design coding habits
 
-## Course Summary (Through Chapter 15 - Classes)
+## Course Summary (Through Chapter 16 - Encapsulation)
 
 ### Completed Scope
 - **Course:** Learn to Code in Python
-- **Chapters Completed:** 15/15 (Introduction → Classes)
-- **Active Days Logged:** 16 days
+- **Chapters Completed:** 16/16 (Introduction → Encapsulation)
+- **Active Days Logged:** 17 days
 
 ### Chapter Breakdown
 
@@ -125,6 +131,7 @@ Daily progress tracking for Boot.dev "Learn to Code in Python" (synced to exact 
 | 12 | Errors | May 23 | OWASP A09: Security Logging and Monitoring Failures |
 | 13 | Type Hints | May 24 | OWASP A09: Security Logging and Monitoring Failures |
 | 15 | Classes | May 30 | OWASP A09: Security Logging and Monitoring Failures |
+| 16 | Encapsulation | May 31 | OWASP A09: Security Logging and Monitoring Failures |
 
 ### Portfolio Direction
 
